@@ -36,12 +36,16 @@ unit-test-job:
 
 deploy-job:
   stage: deploy
-  image: alpine:latest
-  environment: production
+  image: mcr.microsoft.com/azure-cli:2.63.0
   only:
     - main
+  before_script:
+    - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.publishsettings
   script:
-    - echo "Deploying application..."
-    # Example: copy JAR to server via scp
-    # scp target/*.jar user@your-server:/path/to/app/
-    - echo "Application successfully deployed!"
+    - echo "Deploying $APP_NAME to Azure..."
+    - az webapp deploy \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$APP_NAME" \
+      --src-path $(ls target/*.jar)
+  environment:
+    name: production
