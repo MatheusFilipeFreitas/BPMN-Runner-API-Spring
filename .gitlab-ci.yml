@@ -41,9 +41,11 @@ deploy-job:
     - main
   script:
     - echo "$AZURE_CREDENTIALS" > azureauth.json
-    - az login --service-principal --username $(jq -r .clientId azureauth.json) \
-               --password $(jq -r .clientSecret azureauth.json) \
-               --tenant $(jq -r .tenantId azureauth.json)
+    - CLIENT_ID=$(jq -r .clientId azureauth.json)
+    - CLIENT_SECRET=$(jq -r .clientSecret azureauth.json)
+    - TENANT_ID=$(jq -r .tenantId azureauth.json)
+    - az login --service-principal --username "$CLIENT_ID" --password "$CLIENT_SECRET" --tenant "$TENANT_ID"
+
     - zip app.zip target/*.jar
     - az webapp deployment source config-zip \
         --resource-group "$RESOURCE_GROUP" \
