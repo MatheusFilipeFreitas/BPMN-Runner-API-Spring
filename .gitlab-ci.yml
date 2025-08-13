@@ -53,6 +53,3 @@ deploy-job:
     - echo "Application deployed succefully!"
   environment:
     name: production
-
-
-
