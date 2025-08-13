@@ -34,46 +34,27 @@ unit-test-job:
       junit:
         - target/surefire-reports/TEST-*.xml
 
-deploy-job:
+deploy:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:2.75.0
-  only:
-    - main
+  needs:
+    - build
   script:
-    # Save the Azure credentials JSON
-    - echo "$AZURE_CREDENTIALS" > azureauth.json
+    # Save the publish profile from GitLab CI/CD variable
+    - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
 
-    # Debug: show the JSON file
-    - echo "----- Contents of azureauth.json -----"
-    - cat azureauth.json
-    - echo "-------------------------------------"
+    # Find the JAR file from the previous job artifact
+    - ARTIFACT=$(ls *.jar | head -n 1)
 
-    # Extract values using jq
-    - CLIENT_ID=$(jq -r .clientId azureauth.json)
-    - CLIENT_SECRET=$(jq -r .clientSecret azureauth.json)
-    - TENANT_ID=$(jq -r .tenantId azureauth.json)
-    - SUBSCRIPTION_ID=$(jq -r .subscriptionId azureauth.json)
-
-    # Debug: show extracted values (hide client secret for security)
-    - echo "CLIENT_ID=$CLIENT_ID"
-    - echo "TENANT_ID=$TENANT_ID"
-    - echo "SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
-
-    # Login to Azure using the service principal
-    - az login --service-principal --username "$CLIENT_ID" --password "$CLIENT_SECRET" --tenant "$TENANT_ID"
-
-    # Optional: set subscription explicitly
-    - az account set --subscription "$SUBSCRIPTION_ID"
-
-    # Package your app
-    - zip app.zip target/*.jar
-
-    # Deploy to Azure Web App
+    # Deploy to Azure Web App using the publish profile
     - az webapp deployment source config-zip \
+        --name "springboot-app-test" \
         --resource-group "$RESOURCE_GROUP" \
-        --name "$APP_NAME" \
-        --src app.zip
-
+        --src "$ARTIFACT" \
+        --subscription "$SUBSCRIPTION_ID"
+  artifacts:
+    paths:
+      - "*.jar"
   environment:
     name: production
 
