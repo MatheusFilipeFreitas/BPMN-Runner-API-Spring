@@ -36,13 +36,13 @@ unit-test-job:
 
 deploy-job:
   stage: deploy
-  image: mcr.microsoft.com/azure-cli:2.75.0
+  image: mcr.microsoft.com/azure-cli:2.75.0-bullseye
   needs:
     - job: unit-test-job
     - job: build-job
       artifacts: true
   script:
-  - apk add --no-cache zip
+  - apt-get update && apt-get install -y zip
   - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
   - ARTIFACT=$(ls target/*.jar | head -n 1)
   - zip app.zip "$ARTIFACT"
