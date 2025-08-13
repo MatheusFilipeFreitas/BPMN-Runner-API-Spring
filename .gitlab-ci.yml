@@ -38,25 +38,16 @@ deploy-job:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:2.75.0
   needs:
+    - job: unit-test-job
     - job: build-job
       artifacts: true
   script:
     - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
-
-    # Find the JAR file
     - ARTIFACT=$(ls target/*.jar | head -n 1)
     - echo "Found artifact: $ARTIFACT"
-
-    # Zip the JAR (Azure requires a zip file for deployment)
     - ZIP_FILE="${ARTIFACT%.jar}.zip"
     - zip -j "$ZIP_FILE" "$ARTIFACT"
-
-    # Deploy to Azure Web App using the zip
-    - az webapp deployment source config-zip \
-        --name "springboot-app-test" \
-        --resource-group "$RESOURCE_GROUP" \
-        --src "$ZIP_FILE" \
-        --subscription "$SUBSCRIPTION_ID"
+    - az webapp deployment source config-zip --name "springboot-app-test" --resource-group "$RESOURCE_GROUP" --src "$ZIP_FILE" --subscription "$SUBSCRIPTION_ID"
 
 
 
