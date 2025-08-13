@@ -44,10 +44,15 @@ deploy-job:
   script:
     - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
     - ARTIFACT=$(ls target/*.jar | head -n 1)
-    - echo "Found artifact: $ARTIFACT"
-    - ZIP_FILE="${ARTIFACT%.jar}.zip"
-    - zip -j "$ZIP_FILE" "$ARTIFACT"
-    - az webapp deployment source config-zip --name "springboot-app-test" --resource-group "$RESOURCE_GROUP" --src "$ZIP_FILE" --subscription "$SUBSCRIPTION_ID"
-
+    - az webapp deployment source config-zip \
+        --name "springboot-app-test" \
+        --resource-group "$RESOURCE_GROUP" \
+        --src "$ARTIFACT" \
+        --subscription "$SUBSCRIPTION_ID"
+  artifacts:
+    paths:
+      - "*.jar"
+  environment:
+    name: production
 
 
