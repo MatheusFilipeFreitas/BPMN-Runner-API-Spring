@@ -34,27 +34,19 @@ unit-test-job:
       junit:
         - target/surefire-reports/TEST-*.xml
 
-deploy:
+deploy-job:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:2.75.0
   needs:
-    - build-job
+    - job: build-job
+      artifacts: true
   script:
-    # Save the publish profile from GitLab CI/CD variable
     - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
-
-    # Find the JAR file from the previous job artifact
-    - ARTIFACT=$(ls *.jar | head -n 1)
-
-    # Deploy to Azure Web App using the publish profile
+    - ARTIFACT=$(ls target/*.jar | head -n 1)
     - az webapp deployment source config-zip \
         --name "springboot-app-test" \
         --resource-group "$RESOURCE_GROUP" \
         --src "$ARTIFACT" \
         --subscription "$SUBSCRIPTION_ID"
-  artifacts:
-    paths:
-      - "*.jar"
-  environment:
-    name: production
+
 
