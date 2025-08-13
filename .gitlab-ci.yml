@@ -36,16 +36,18 @@ unit-test-job:
 
 deploy-job:
   stage: deploy
-  image: mcr.microsoft.com/azure-cli:2.75.0
+  image: mcr.microsoft.com/azure-cli:2.63.0
   only:
     - main
-  before_script:
-    - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.publishsettings
   script:
-    - echo "Deploying $APP_NAME to Azure..."
-    - az webapp deploy \
-      --resource-group "$RESOURCE_GROUP" \
-      --name "$APP_NAME" \
-      --src-path $(ls target/*.jar)
+    - echo "$AZURE_CREDENTIALS" > azureauth.json
+    - az login --service-principal --username $(jq -r .clientId azureauth.json) \
+               --password $(jq -r .clientSecret azureauth.json) \
+               --tenant $(jq -r .tenantId azureauth.json)
+    - zip app.zip target/*.jar
+    - az webapp deployment source config-zip \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "$APP_NAME" \
+        --src app.zip
   environment:
     name: production
