@@ -44,9 +44,7 @@ deploy-job:
   script:
     - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
     - ARTIFACT=$(ls target/*.jar | head -n 1)
-    - echo "Found artifact: $ARTIFACT"
     - az webapp deploy --resource-group "$RESOURCE_GROUP" --name "springboot-app-test" --src-path "$ARTIFACT" --type jar --subscription "$SUBSCRIPTION_ID"
-
   artifacts:
     paths:
       - target/*.jar
