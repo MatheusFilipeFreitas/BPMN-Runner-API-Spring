@@ -44,8 +44,6 @@ deploy-job:
   script:
   - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
   - ARTIFACT=$(ls target/*.jar | head -n 1)
-  - if [ -z "$ARTIFACT" ]; then echo "No artifact found!"; exit 1; fi
-  - echo "Found artifact: $ARTIFACT"
   - az webapp deploy --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --src-path "$ARTIFACT" --type jar --publish-profile publishProfile.xml  
   artifacts:
     paths:
