@@ -36,7 +36,7 @@ unit-test-job:
 
 deploy-job:
   stage: deploy
-  image: mcr.microsoft.com/azure-cli:2.63.0
+  image: mcr.microsoft.com/azure-cli:2.75.0
   only:
     - main
   script:
