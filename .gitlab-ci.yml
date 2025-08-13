@@ -8,6 +8,7 @@ variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - .m2/repository
 
@@ -36,21 +37,21 @@ unit-test-job:
 
 deploy-job:
   stage: deploy
-  image: mcr.microsoft.com/azure-cli:2.75.0-bullseye
+  image: mcr.microsoft.com/azure-cli:latest
   needs:
     - job: unit-test-job
     - job: build-job
       artifacts: true
   script:
-  - apt-get update && apt-get install -y zip
-  - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
-  - ARTIFACT=$(ls target/*.jar | head -n 1)
-  - zip app.zip "$ARTIFACT"
-  - az webapp deployment source config-zip --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --src app.zip  
-  artifacts:
-    paths:
-      - target/*.jar
+    - echo "Starting deployment to Azure..."
+    - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
+    - ARTIFACT=$(ls target/*.jar | head -n 1)
+    - az login --service-principal --username $AZURE_CLIENT_ID --password "$AZURE_FULL_SECRET" --tenant $AZURE_TENANT_ID
+    - echo "Azure login successful."
+    - az webapp deploy --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_WEB_APP_NAME --src-path "$ARTIFACT" --type jar  
+    - echo "Application deployed succefully!"
   environment:
     name: production
+
 
 
