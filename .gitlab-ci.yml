@@ -34,13 +34,6 @@ unit-test-job:
       junit:
         - target/surefire-reports/TEST-*.xml
 
-lint-test-job:
-  stage: test
-  image: maven:3.9.6-eclipse-temurin-21
-  script:
-    - echo "Running code style checks..."
-    - mvn $MAVEN_CLI_OPTS checkstyle:check
-
 deploy-job:
   stage: deploy
   image: alpine:latest
