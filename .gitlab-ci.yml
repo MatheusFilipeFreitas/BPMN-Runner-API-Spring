@@ -42,6 +42,7 @@ deploy-job:
     - job: build-job
       artifacts: true
   script:
+  - apt-get update && apt-get install -y zip
   - echo "$AZURE_PUBLISH_PROFILE" > publishProfile.xml
   - ARTIFACT=$(ls target/*.jar | head -n 1)
   - zip app.zip "$ARTIFACT"
