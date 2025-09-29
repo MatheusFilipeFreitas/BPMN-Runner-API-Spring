@@ -60,6 +60,18 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.13.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.camunda.bpm.model</groupId>
+			<artifactId>camunda-bpmn-model</artifactId>
+			<version>7.21.0</version>
+		</dependency>
+
 <!--		<dependency>-->
 <!--			<groupId>org.springframework.boot</groupId>-->
 <!--			<artifactId>spring-boot-starter-data-redis</artifactId>-->
@@ -94,6 +106,22 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-maven-plugin</artifactId>
+				<version>4.13.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>antlr4</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
 				</configuration>
 			</plugin>
 		</plugins>
