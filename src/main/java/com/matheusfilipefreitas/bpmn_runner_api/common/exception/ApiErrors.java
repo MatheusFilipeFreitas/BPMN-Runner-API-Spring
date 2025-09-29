@@ -1,10 +1,9 @@
 package com.matheusfilipefreitas.bpmn_runner_api.common.exception;
 
-import lombok.Getter;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import lombok.Getter;
 
 public class ApiErrors {
 
