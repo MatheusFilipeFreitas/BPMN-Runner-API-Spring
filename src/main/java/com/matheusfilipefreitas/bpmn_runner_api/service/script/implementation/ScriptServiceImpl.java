@@ -25,12 +25,6 @@ import com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.BPMNConnectionServi
 import com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.BPMNElementService;
 import com.matheusfilipefreitas.bpmn_runner_api.service.script.ScriptService;
 
-/** 
- * TODO: rever regra de taskRef como '-> id' para adicionar regras de validação:
- * - IdCollectorListener
- * - ElementIdsValidatorImpl
-*/
-
 @Service
 public class ScriptServiceImpl implements ScriptService {
     private final ElementIdsValidator idsValidator;
@@ -107,7 +101,7 @@ public class ScriptServiceImpl implements ScriptService {
         try {
             this.elementService.saveEntitiesFromElementInfoList(elementsInfo);
         } catch (Exception e) {
-            // clean models in service
+            this.elementService.clearEntities();
         }
     }
 
@@ -115,7 +109,7 @@ public class ScriptServiceImpl implements ScriptService {
         try {
             this.connectionService.saveConnectionsFromElementInfo(elementsInfo);
         } catch (Exception e) {
-            // clean models in service
+            this.connectionService.resetConnections();
         }
     }
 

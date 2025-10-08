@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdAndLabelEntity;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.container.GatewayContainer;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.GatewayType;
 
 import lombok.Getter;
@@ -13,15 +14,15 @@ import lombok.Setter;
 @Getter
 public class Gateway extends CommonBPMNIdAndLabelEntity {
     private GatewayType type;
-    private List<CommonBPMNIdAndLabelEntity> childrens = new ArrayList<>();
+    private List<GatewayContainer> childrens = new ArrayList<>();
 
-    public Gateway(String id, String label, String type, String processId) {
-        super(id, label, processId);
+    public Gateway(String id, String label, String type, String processId, Integer index) {
+        super(id, label, processId, index);
         this.type = GatewayType.fromString(type);
     }
 
-    public Gateway(String id, String label, GatewayType type, List<CommonBPMNIdAndLabelEntity> childrens, String processId) {
-        super(id, label, processId);
+    public Gateway(String id, String label, GatewayType type, List<GatewayContainer> childrens, String processId, Integer index) {
+        super(id, label, processId, index);
         this.type = type;
         this.childrens = childrens;
     }

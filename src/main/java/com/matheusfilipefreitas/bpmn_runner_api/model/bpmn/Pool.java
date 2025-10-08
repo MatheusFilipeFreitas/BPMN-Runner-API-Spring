@@ -8,8 +8,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Pool extends CommonBPMNIdAndLabelEntity {
-    public Pool(String id, String label, String processId) {
-        super(id, label, processId);
+    public Pool(String id, String label, String processId, Integer index) {
+        super(id, label, processId, index);
     }
 
     @Override

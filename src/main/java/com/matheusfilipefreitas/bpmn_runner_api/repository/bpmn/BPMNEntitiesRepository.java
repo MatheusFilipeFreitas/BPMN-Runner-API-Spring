@@ -15,4 +15,5 @@ public interface BPMNEntitiesRepository {
     void addConnection(ConnectionBPMNEntity connection);
     Optional<ConnectionBPMNEntity> getConnectionByEntityId(String id);
     void resetConnections();
+    void resetEntities();
 }

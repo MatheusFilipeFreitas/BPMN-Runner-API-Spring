@@ -13,21 +13,23 @@ public class ElementInfo {
     private final String label;
     private final String type;
     private final String processId;
+    private final Integer index;
 
-    public ElementInfo(String id, ElementType elementType, String label, String type, String processId) {
+    public ElementInfo(String id, ElementType elementType, String label, String type, String processId, Integer index) {
         this.id = id;
         this.elementType = elementType;
         this.label = label;
         this.type = type;
         this.processId = processId;
+        this.index = index;
     }
 
-    public ElementInfo(String id, ElementType elementType, String processId) {
-        this(id, elementType, null, null, processId);
+    public ElementInfo(String id, ElementType elementType, String processId, Integer index) {
+        this(id, elementType, null, null, processId, index);
     }
 
-    public ElementInfo(String id, ElementType elementType, String label, String processId) {
-        this(id, elementType, label, null, processId);
+    public ElementInfo(String id, ElementType elementType, String label, String processId, Integer index) {
+        this(id, elementType, label, null, processId, index);
     }
 
     @Override
@@ -38,6 +40,7 @@ public class ElementInfo {
                 (label != null ? ", label='" + label + '\'' : "") +
                 (type != null ? ", type='" + type + '\'' : "") +
                 (processId != null ? "/ processId='" + processId + '\'' : "") +
+                (index != null ? "/ index='" + index + '\'' : "") +
                 '}';
     }
 }

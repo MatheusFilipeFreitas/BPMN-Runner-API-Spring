@@ -11,4 +11,5 @@ import lombok.Setter;
 public abstract class CommonBPMNIdEntity {
     protected String id;
     protected String processId;
+    protected Integer index;
 }

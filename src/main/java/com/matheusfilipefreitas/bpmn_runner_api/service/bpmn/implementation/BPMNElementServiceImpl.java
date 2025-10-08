@@ -54,36 +54,41 @@ public class BPMNElementServiceImpl implements BPMNElementService {
         }
     }
 
+    @Override
+    public void clearEntities() {
+        repository.resetEntities();
+    }
+
     private Optional<CommonBPMNIdEntity> getEntityFromElementInfo(ElementInfo elementInfo) {
         switch(elementInfo.getElementType()) {
             case END_EVENT -> {
                 return Optional.ofNullable(
-                    new EndEvent(elementInfo.getId(), elementInfo.getProcessId())
+                    new EndEvent(elementInfo.getId(), elementInfo.getProcessId(), elementInfo.getIndex())
                 );
             }
             case GATEWAY -> {
                 return Optional.ofNullable(
-                    new Gateway(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId())
+                    new Gateway(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), elementInfo.getIndex())
                 );
             }
             case POOL -> {
                 return Optional.ofNullable(
-                     new Pool(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getProcessId())
+                     new Pool(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getProcessId(), elementInfo.getIndex())
                 );
             }
             case PROCESS -> {
                 return Optional.ofNullable(
-                    new Process(elementInfo.getId(), elementInfo.getLabel())
+                    new Process(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getIndex())
                 );
             }
             case START_EVENT -> {
                 return Optional.ofNullable(
-                    new StartEvent(elementInfo.getId(), elementInfo.getProcessId())
+                    new StartEvent(elementInfo.getId(), elementInfo.getProcessId(), elementInfo.getIndex())
                 );
             }
             case TASK -> {
                 return Optional.ofNullable(
-                    new Task(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId())
+                    new Task(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), elementInfo.getIndex())
                 );
             }
             default -> {

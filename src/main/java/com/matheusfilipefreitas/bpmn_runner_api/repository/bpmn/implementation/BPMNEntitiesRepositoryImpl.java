@@ -53,6 +53,11 @@ public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
     }
 
     @Override
+    public void resetEntities() {
+        this.entities.clear();
+    }
+
+    @Override
     public List<CommonBPMNIdEntity> getAllEntities() {
         return this.entities.values()
             .stream()

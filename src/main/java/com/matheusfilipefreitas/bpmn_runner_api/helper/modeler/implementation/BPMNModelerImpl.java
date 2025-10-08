@@ -1,13 +1,20 @@
 package com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.implementation;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.Optional;
 
+import org.apache.logging.log4j.util.TriConsumer;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.Collaboration;
+import org.camunda.bpm.model.bpmn.instance.ConditionExpression;
+import org.camunda.bpm.model.bpmn.instance.FlowNode;
+import org.camunda.bpm.model.bpmn.instance.InteractionNode;
+import org.camunda.bpm.model.bpmn.instance.MessageFlow;
 import org.camunda.bpm.model.bpmn.instance.Participant;
-import org.camunda.bpm.model.bpmn.instance.SubProcess;
+import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.springframework.stereotype.Component;
 
 import com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.BPMNModeler;
@@ -19,12 +26,13 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.StartEvent;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Task;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.ConnectionType;
+
 
 @Component
 public class BPMNModelerImpl implements BPMNModeler {
-    private final Map<Class<?>, BiConsumer<CommonBPMNIdEntity, BpmnModelInstance>> handlers = Map.of(
+    private final Map<Class<?>, TriConsumer<CommonBPMNIdEntity, BpmnModelInstance, List<CommonBPMNIdEntity>>> handlers = Map.of(
         Pool.class, this::handlePool,
-        Process.class, this::handleProcess,
         StartEvent.class, this::handleStartEvent,
         Task.class, this::handleTask,
         Gateway.class, this::handleGateway,
@@ -35,29 +43,141 @@ public class BPMNModelerImpl implements BPMNModeler {
     public void modelEntitiesIntoModel(BpmnModelInstance model, List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModel(model);
 
-        entities.stream()
-                .filter(e -> e instanceof Process)
-                .forEach(entity -> handleProcess(entity, model));
-
-        entities.stream()
-                .filter(e -> e instanceof Pool)
-                .forEach(entity -> handlePool(entity, model));
-
-        entities.stream()
-                .filter(e -> !(e instanceof Process || e instanceof Pool))
-                .forEach(entity -> handlers.getOrDefault(entity.getClass(), this::handleDefault)
-                                        .accept(entity, model));
+        List<CommonBPMNIdEntity> sortedEntities = entities.stream()
+            .sorted(Comparator.comparing(CommonBPMNIdEntity::getIndex)).toList();
+        
+        sortedEntities.forEach(entity -> {
+                if (entity instanceof Pool) {
+                    handlePool(entity, model, sortedEntities);
+                } else if (!(entity instanceof Process)) {
+                    handlers.getOrDefault(entity.getClass(), this::handleDefault)
+                            .accept(entity, model, sortedEntities);
+                }
+            });
     }
 
     @Override
     public void modelConnectionsIntoModel(BpmnModelInstance model, List<ConnectionBPMNEntity> connections) {
-        // TODO Auto-generated method stub
-        // throw new UnsupportedOperationException("Unimplemented method 'modelConnectionsIntoModel'");
+        throwIfCannotGetModel(model);
+
+        List<ConnectionBPMNEntity> orderedConnections = connections.stream()
+            .sorted(Comparator.comparing(ConnectionBPMNEntity::getIndex)).toList();
+
+        orderedConnections = handleSequentialAndMessageEntities(orderedConnections);
+
+        orderedConnections.forEach(connection -> {
+            throwIfCannotGetConnectionType(connection);
+            
+            switch (connection.getType()) {
+                case EXCLUSIVE -> handleExclusive(connection, model);
+                case PARALLEL -> handleParallel(connection, model);
+                case MESSAGE -> handleMessage(connection, model);
+                default -> handleSequencial(connection, model);
+            }
+        });
     }
 
-    private void handlePool(CommonBPMNIdEntity entity, BpmnModelInstance model) {
+    private void handleParallel(ConnectionBPMNEntity connection, BpmnModelInstance model) {
+        FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
+        String gatewayId = "parallel_gw_from_" + sourceNode.getId();
+
+        org.camunda.bpm.model.bpmn.instance.Gateway gateway = findGateway(model, gatewayId);
+        FlowNode targetNode = model.getModelElementById(connection.getTargetId());
+        createSequenceFlow(model, gateway, targetNode, null, null);
+    }
+
+    private void handleExclusive(ConnectionBPMNEntity connection, BpmnModelInstance model) {
+        FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
+        String gatewayId = "exclusive_gw_from_" + sourceNode.getId();
+
+        org.camunda.bpm.model.bpmn.instance.Gateway gateway = findGateway(model, gatewayId);
+
+        FlowNode targetNode = model.getModelElementById(connection.getTargetId());
+        String conditionExpression = "${" + connection.getLabel() + "}";
+        createSequenceFlow(model, gateway, targetNode, connection.getLabel(), conditionExpression);
+    }
+
+    public void createSequenceFlow(BpmnModelInstance model, FlowNode from, FlowNode to, String name, String conditionExpression) {
+        String flowId = "flow_" + from.getId() + "_" + to.getId();
+        SequenceFlow sequenceFlow = model.newInstance(SequenceFlow.class);
+        sequenceFlow.setId(flowId);
+        sequenceFlow.setSource(from);
+        sequenceFlow.setTarget(to);
+        
+        if (name != null && !name.isBlank()) {
+            sequenceFlow.setName(name);
+        }
+        
+        if (conditionExpression != null && !conditionExpression.isBlank()) {
+            ConditionExpression condition = model.newInstance(ConditionExpression.class);
+            condition.setTextContent(conditionExpression);
+            sequenceFlow.setConditionExpression(condition);
+        }
+
+        String processId = findProcessIdForNode(model, from);
+        org.camunda.bpm.model.bpmn.instance.Process process = model.getModelElementById(processId);
+        if (process == null) {
+            throw new RuntimeException("Cannot find process for sequence flow between " + from.getId() + " and " + to.getId());
+        }
+
+        process.addChildElement(sequenceFlow);
+    }
+
+    private String findProcessIdForNode(BpmnModelInstance model, FlowNode node) {
+        org.camunda.bpm.model.xml.instance.ModelElementInstance parent = node.getParentElement();
+        while (parent != null && !(parent instanceof org.camunda.bpm.model.bpmn.instance.Process)) {
+            parent = parent.getParentElement();
+        }
+        if (parent instanceof org.camunda.bpm.model.bpmn.instance.Process) {
+            return ((org.camunda.bpm.model.bpmn.instance.Process) parent).getId();
+        }
+        throw new RuntimeException("Could not find parent wi ID " + node.getId() + ", " + node.getName());
+    }
+
+    private void handleMessage(ConnectionBPMNEntity connection, BpmnModelInstance model) {
+        InteractionNode sourceNode = model.getModelElementById(connection.getSourceId());
+        InteractionNode targetNode = model.getModelElementById(connection.getTargetId());
+
+        if (sourceNode == null || targetNode == null) {
+            throw new RuntimeException("Source or target for message flow not found.");
+        }
+
+        Collaboration collaboration = model.getModelElementsByType(Collaboration.class).iterator().next();
+        if (collaboration == null) {
+            throw new RuntimeException("Cannot create message flow: No <collaboration> element found in the model.");
+        }
+
+        MessageFlow messageFlow = model.newInstance(MessageFlow.class);
+        messageFlow.setId("msg_flow_" + connection.getSourceId() + "_" + connection.getTargetId());
+        messageFlow.setName(connection.getLabel());
+        messageFlow.setSource(sourceNode);
+        messageFlow.setTarget(targetNode);
+
+        collaboration.addChildElement(messageFlow);
+    }
+
+    private void handleSequencial(ConnectionBPMNEntity connection, BpmnModelInstance model) {
+        FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
+        FlowNode targetNode = model.getModelElementById(connection.getTargetId());
+
+        if (sourceNode == null || targetNode == null) {
+            throw new RuntimeException("Cannot create sequence flow. Node not found. From: "
+                    + connection.getSourceId() + ", To: " + connection.getTargetId());
+        }
+        
+        if (connection.getType() == ConnectionType.MESSAGE) {
+            return;
+        }
+        createSequenceFlow(model, sourceNode, targetNode, connection.getLabel(), null);
+    }
+
+    private void handlePool(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModel(model);
         Pool pool = (Pool) entity;
+        String processId = getPoolProcess(pool.getId(), entities);
+        pool.setProcessId(processId);
+
+        handleProcess(new Process(processId, null, null), model);
 
         Collaboration collaboration = model.getModelElementsByType(Collaboration.class).stream().findFirst().orElseGet(() -> {
             Collaboration collab = model.newInstance(Collaboration.class);
@@ -70,7 +190,7 @@ public class BPMNModelerImpl implements BPMNModeler {
         participant.setId(pool.getId());
         participant.setName(pool.getLabel());
 
-        org.camunda.bpm.model.bpmn.instance.Process processToRef = model.getModelElementById("mainProcess");
+        org.camunda.bpm.model.bpmn.instance.Process processToRef = model.getModelElementById(processId);
         if (processToRef != null) {
             participant.setProcess(processToRef);
         } else {
@@ -84,17 +204,17 @@ public class BPMNModelerImpl implements BPMNModeler {
         throwIfCannotGetModel(model);
         Process processEntity = (Process) entity;
 
-        SubProcess subProcess = model.newInstance(SubProcess.class);
-        subProcess.setId(processEntity.getId());
-        subProcess.setName(processEntity.getLabel());
+        org.camunda.bpm.model.bpmn.instance.Process process =
+            model.newInstance(org.camunda.bpm.model.bpmn.instance.Process.class);
+            
+        process.setId(processEntity.getId());
+        process.setName(processEntity.getLabel());
+        process.setExecutable(true);
 
-        org.camunda.bpm.model.bpmn.instance.Process mainProcess = 
-            model.getModelElementById("mainProcess");
-
-        mainProcess.addChildElement(subProcess);
+        model.getDefinitions().addChildElement(process);
     }
 
-    private void handleStartEvent(CommonBPMNIdEntity entity, BpmnModelInstance model) { 
+    private void handleStartEvent(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) { 
         throwIfCannotGetModel(model);
         StartEvent startEventEntity = (StartEvent) entity;
 
@@ -105,7 +225,7 @@ public class BPMNModelerImpl implements BPMNModeler {
         attachToProcess(model, startEvent, startEventEntity.getProcessId());
     }
 
-    private void handleTask(CommonBPMNIdEntity entity, BpmnModelInstance model) {
+    private void handleTask(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModel(model);
         Task taskEntity = (Task) entity;
         
@@ -144,7 +264,7 @@ public class BPMNModelerImpl implements BPMNModeler {
     }
 
 
-    private void handleGateway(CommonBPMNIdEntity entity, BpmnModelInstance model) {
+    private void handleGateway(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModel(model);
         Gateway gatewayEntity = (Gateway) entity;
         org.camunda.bpm.model.bpmn.instance.Gateway bpmnGateway = createBpmnGateway(gatewayEntity, model);
@@ -173,7 +293,7 @@ public class BPMNModelerImpl implements BPMNModeler {
         return parallel;
     }
 
-    private void handleEndEvent(CommonBPMNIdEntity entity, BpmnModelInstance model) {
+    private void handleEndEvent(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModel(model);
         EndEvent endEventEntity = (EndEvent) entity;
 
@@ -184,7 +304,7 @@ public class BPMNModelerImpl implements BPMNModeler {
         attachToProcess(model, endEvent, endEventEntity.getProcessId());
     }
 
-    private void handleDefault(CommonBPMNIdEntity entity, BpmnModelInstance model) { 
+    private void handleDefault(CommonBPMNIdEntity entity, BpmnModelInstance model, List<CommonBPMNIdEntity> entities) { 
         throw new RuntimeException(
             "Could not map entity because the type isn't specified in modeler: " + entity.getClass().getName()
         );
@@ -195,14 +315,89 @@ public class BPMNModelerImpl implements BPMNModeler {
             throw new RuntimeException("Cannot get model while trying to model");
         }
     }
+
+    private void throwIfCannotGetConnectionType(ConnectionBPMNEntity connection) {
+        if (connection.getType() == null) {
+        throw new RuntimeException("Connection type is null for connection between "
+                + connection.getSourceId() + " and " + connection.getTargetId());
+        }
+    }
     
     private void attachToProcess(BpmnModelInstance model, org.camunda.bpm.model.bpmn.instance.FlowNode node, String processId) {
-        org.camunda.bpm.model.bpmn.instance.SubProcess process = model.getModelElementById(processId);
-        if (process != null) {
-            process.addChildElement(node);
-        } else {
-            throw new RuntimeException("Process with ID '" + processId + "' not found for element '" + node.getId() + "'.");
+        try {
+            org.camunda.bpm.model.bpmn.instance.SubProcess subProcess = model.getModelElementById(processId);
+            if (subProcess != null) {
+                subProcess.addChildElement(node);
+            } else {
+                org.camunda.bpm.model.bpmn.instance.Process process = model.getModelElementById(processId);
+                if (process != null) {
+                    process.addChildElement(node);
+                } else {
+                    throw new RuntimeException("Process with ID '" + processId + "' not found for element '" + node.getId() + "'.");
+                }
+            }
+        } catch (Exception ex) {
+            org.camunda.bpm.model.bpmn.instance.Process process = model.getModelElementById(processId);
+            if (process != null) {
+                process.addChildElement(node);
+            } else {
+                throw new RuntimeException("Process with ID '" + processId + "' not found for element '" + node.getId() + "'.");
+            }
         }
     }
 
-}
+    private org.camunda.bpm.model.bpmn.instance.Gateway findGateway(BpmnModelInstance model, String gatewayId) {
+        org.camunda.bpm.model.bpmn.instance.Gateway gateway = model.getModelElementById(gatewayId);
+
+        if (gateway == null) {
+            throw new RuntimeException("Could not find gateway with id: " + gatewayId);
+        }
+        return gateway;
+    }
+
+    private String getPoolProcess(String poolId, List<CommonBPMNIdEntity> entities) {
+        Optional<CommonBPMNIdEntity> poolEntityOpt = entities.stream()
+                .filter(e -> poolId.equals(e.getId()))
+                .findFirst();
+
+        if (poolEntityOpt.isEmpty()) {
+            return poolId + "Process";
+        }
+
+        CommonBPMNIdEntity poolEntity = poolEntityOpt.get();
+        int index = entities.indexOf(poolEntity);
+
+        if (index + 1 < entities.size()) {
+            CommonBPMNIdEntity processEntity = entities.get(index + 1);
+            if (processEntity.getClass() == Process.class) {
+                return processEntity.getId();
+            }
+            return poolId + "Process";
+        }
+        return poolId + "Process";
+    }
+
+    private List<ConnectionBPMNEntity> handleSequentialAndMessageEntities(List<ConnectionBPMNEntity> entities) {
+        List<ConnectionBPMNEntity> mutableEntities = new ArrayList<>(entities);
+
+        for (int i = 1; i < mutableEntities.size(); i++) {
+            var prev = mutableEntities.get(i - 1);
+            var current = mutableEntities.get(i);
+
+            if (areTheSameConnectionEntity(prev, current)) {
+                var clearIndex = (prev.getType() == ConnectionType.SEQUENCE) ? (i - 1) : i;
+                mutableEntities.remove(clearIndex);
+                if (i > 1) {
+                  i--;  
+                }
+            }
+        }
+        return mutableEntities;
+    }
+
+
+    private boolean areTheSameConnectionEntity(ConnectionBPMNEntity prev, ConnectionBPMNEntity current) {
+        return  (prev.getSourceId() == null ? current.getSourceId() == null : prev.getSourceId().equals(current.getSourceId()))
+                && (prev.getTargetId() == null ? current.getTargetId() == null : prev.getTargetId().equals(current.getTargetId()));
+    }
+ }

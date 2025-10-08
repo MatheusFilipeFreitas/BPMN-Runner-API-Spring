@@ -8,4 +8,5 @@ import com.matheusfilipefreitas.bpmn_runner_api.service.common.genericcrudservic
 
 public interface BPMNElementService extends CommonCrudService<CommonBPMNIdEntity, String> {
     void saveEntitiesFromElementInfoList(List<ElementInfo> elementsInfo);
+    void clearEntities();
 }

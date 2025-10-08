@@ -11,8 +11,8 @@ import lombok.Setter;
 public abstract class Event extends CommonBPMNIdEntity {
     protected EventType type;
     
-    protected Event(String id, EventType type, String processId) {
-        super(id, processId);
+    protected Event(String id, EventType type, String processId, Integer index) {
+        super(id, processId, index);
         this.type = type;
     }
 }

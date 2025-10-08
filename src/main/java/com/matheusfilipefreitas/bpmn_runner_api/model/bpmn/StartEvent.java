@@ -8,8 +8,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StartEvent extends Event {
-    public StartEvent(String id, String processId) {
-        super(id, EventType.START, processId);
+    public StartEvent(String id, String processId, Integer index) {
+        super(id, EventType.START, processId, index);
     }
 
         @Override

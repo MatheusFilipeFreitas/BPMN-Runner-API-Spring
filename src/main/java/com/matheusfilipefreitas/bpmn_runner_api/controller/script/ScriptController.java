@@ -1,6 +1,8 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.script;
 
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,8 +17,8 @@ import lombok.AllArgsConstructor;
 public class ScriptController {
     private final ScriptService service; 
 
-    @PostMapping("/execute")
-    public String executeScript() {
+    @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public String executeScript(@RequestBody String code) {
             String script = """
                 pool(cliente, "Cliente") {
                     process(procCliente, "Fluxo do Cliente") { 
@@ -40,7 +42,7 @@ public class ScriptController {
                     } 
                 }
                 """;
-            service.processScript(script);
-            return "Excute script endpoint called";
+            
+            return service.processScript(script);
     }
 }

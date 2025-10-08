@@ -8,4 +8,5 @@ import com.matheusfilipefreitas.bpmn_runner_api.service.common.genericcrudservic
 
 public interface BPMNConnectionService extends CommonCrudService<ConnectionBPMNEntity, String>{
     void saveConnectionsFromElementInfo(List<ElementInfo> elementsInfo);
+    void resetConnections();
 }

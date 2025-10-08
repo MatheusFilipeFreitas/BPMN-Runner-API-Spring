@@ -11,8 +11,8 @@ import lombok.Setter;
 public class Task extends CommonBPMNIdAndLabelEntity {
     private TaskType type;
 
-    public Task(String id, String label, String type, String processId) {
-        super(id, label, processId);
+    public Task(String id, String label, String type, String processId, Integer index) {
+        super(id, label, processId, index);
         this.type = TaskType.fromString(type);
     }
 

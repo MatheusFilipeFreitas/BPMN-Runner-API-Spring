@@ -8,8 +8,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Process extends CommonBPMNIdAndLabelEntity {
-    public Process(String id, String label) {
-        super(id, label, id);
+    public Process(String id, String label, Integer index) {
+        super(id, label, id, index);
     }
 
     @Override

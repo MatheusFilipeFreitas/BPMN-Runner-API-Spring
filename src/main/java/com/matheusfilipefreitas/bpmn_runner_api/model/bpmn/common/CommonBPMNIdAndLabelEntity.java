@@ -8,8 +8,8 @@ import lombok.Setter;
 public abstract class CommonBPMNIdAndLabelEntity extends CommonBPMNIdEntity {
     protected String label;
 
-    public CommonBPMNIdAndLabelEntity(String id, String label, String processId) {
-        super(id, processId);
+    public CommonBPMNIdAndLabelEntity(String id, String label, String processId, Integer index) {
+        super(id, processId, index);
         this.label = label;
     }
 }
