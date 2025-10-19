@@ -1,6 +1,10 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.script;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +22,12 @@ public class ScriptController {
     private final ScriptService service; 
 
     @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_XML_VALUE)
-    public String executeScript(@RequestBody String code) {
-        return service.processScript(code);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<String> executeScript(@RequestBody String code, @AuthenticationPrincipal String uid) {
+        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
+        }
+        String result = service.processScript(code);
+        return ResponseEntity.ok(result);
     }
 }
