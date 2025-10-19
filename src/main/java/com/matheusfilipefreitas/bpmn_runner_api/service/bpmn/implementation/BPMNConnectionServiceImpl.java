@@ -2,21 +2,22 @@ package com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.implementation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 import org.springframework.stereotype.Service;
 
-import com.matheusfilipefreitas.bpmn_runner_api.common.exception.interpreter.InterpreterException;
 import com.matheusfilipefreitas.bpmn_runner_api.common.exception.notfound.NotFoundException;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.ConnectionType;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementExclusiveBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementInfo;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementParallelBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.BranchOrder;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.BranchType;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.ElementType;
 import com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn.BPMNEntitiesRepository;
 import com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.BPMNConnectionService;
@@ -49,8 +50,8 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
     }
 
     @Override
-    public void saveConnectionsFromElementInfo(List<ElementInfo> elementsInfo) {
-        List<ConnectionBPMNEntity> connections = getConnectionEntityFromElementInfoList(elementsInfo);
+    public void saveConnectionsFromElementInfo(List<ElementInfo> elementsInfo, List<ElementBranch> branchesInfo) {
+        List<ConnectionBPMNEntity> connections = getConnectionEntityFromElementInfoList(elementsInfo, branchesInfo);
         for (ConnectionBPMNEntity connection : connections) {
             throwIfEntitiesWereNotCreated(connection.getConnectionEntityIdsAsList());
             save(connection);
@@ -62,70 +63,171 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
         repository.resetConnections();
     }
 
-    private List<ConnectionBPMNEntity> getConnectionEntityFromElementInfoList(List<ElementInfo> elementsInfo) {
+    private List<ConnectionBPMNEntity> getConnectionEntityFromElementInfoList(List<ElementInfo> elementsInfo, List<ElementBranch> branchesInfo) {
         var orderedElementsInfo = elementsInfo.stream()
             .sorted(Comparator.comparing(ElementInfo::getIndex))
             .filter(element -> element.getElementType() != ElementType.POOL &&
                 element.getElementType() != ElementType.PROCESS).toList();
 
-        return buildConnectionsFromFlow(orderedElementsInfo);
+        return buildConnectionsFromFlow(orderedElementsInfo, branchesInfo);
     }
 
-    private List<ConnectionBPMNEntity> buildConnectionsFromFlow(List<ElementInfo> elements) {
+    private List<ConnectionBPMNEntity> buildConnectionsFromFlow(
+            List<ElementInfo> elements,
+            List<ElementBranch> branches) {
+
         List<ConnectionBPMNEntity> connections = new ArrayList<>();
         int indexDefinition = 0;
+        ElementBranch currentBranch = null;
 
-        int maxIterations = elements.size() * 5;
-        int iterationCount = 0;
+        for (int i = 0; i < elements.size() - 1; i++) {
+            ElementInfo current = elements.get(i);
+            ElementInfo next = elements.get(i + 1);
 
-        Set<Integer> visitedIndexes = new HashSet<>();
-
-        for (int i = 1; i < elements.size(); i++) {
-            iterationCount++;
-            if (iterationCount > maxIterations) {
-                throw new InterpreterException("Possible circular flow detected in line: " + elements.get(i).getIndex());
-            }
-
-            var prev = elements.get(i - 1);
-            var current = elements.get(i);
-
-            if (!visitedIndexes.add(i)) {
-                throw new InterpreterException("Possible circular flow detected in line: " + elements.get(i).getIndex());
-            }
-
-            if (current.getElementType() == ElementType.MESSAGE) {
-                OptionalInt indexOpt = IntStream.range(0, elements.size())
-                    .filter(t -> elements.get(t).getId().equals(current.getId())
-                                && elements.get(t).getElementType() != ElementType.MESSAGE)
-                    .findFirst();
-
-                if (indexOpt.isPresent()) {
-                    int targetIndex = indexOpt.getAsInt();
-                    connections.add(new ConnectionBPMNEntity(
-                        prev.getId(), current.getId(), ConnectionType.MESSAGE, null, indexDefinition++
-                    ));
-
-                    Optional<ConnectionBPMNEntity> registeredRecord = connections.stream()
-                        .filter(r -> r.getSourceId().equals(current.getId()))
-                        .findFirst();
-
-                    if (!registeredRecord.isPresent()) {
-                        visitedIndexes.clear();
-                        i = targetIndex;
-                    }
+            if (current.getElementType() == ElementType.GATEWAY) {
+                var branchOpt = findBranchForGateway(current.getId(), branches);
+                
+                if (branchOpt.isPresent()) {
+                    currentBranch = branchOpt.get();
+                    handleConnectionsByBranchType(connections, branchOpt.get(), indexDefinition, current);
+                    connectBranchsToNextElement(branchOpt.get(), elements, connections, indexDefinition);
+                    continue;
                 }
-            } else if (current.getElementType() != ElementType.END_EVENT) {
-                connections.add(new ConnectionBPMNEntity(
-                    prev.getId(), current.getId(), ConnectionType.SEQUENCE, null, indexDefinition++
-                ));
             }
-            // handle exclusive and parallel...
+
+            if (next.getElementType() == ElementType.MESSAGE) {
+                String messageTargetId = next.getId();
+
+                if (messageTargetId != null && !messageTargetId.isBlank()) {
+                    connections.add(new ConnectionBPMNEntity(
+                        current.getId(), messageTargetId, ConnectionType.MESSAGE, null, indexDefinition++
+                    ));
+                }
+
+                int index = IntStream.range(0, elements.size())
+                    .filter(e -> elements.get(e).getId().equals(next.getId()) && elements.get(e).getElementType() != ElementType.MESSAGE)
+                    .findFirst()
+                    .orElse(-1);
+
+                i = index - 1;
+                continue;
+            }
+
+            if (!next.getProcessId().equals(current.getProcessId())) {
+                continue;
+            }
+
+            if (currentBranch != null && areIdsFromDifferentBranches(current.getId(), next.getId(), currentBranch)) {
+                continue;
+            }
+
+            if (currentBranch != null && !isElementInsideABranch(current.getId(), currentBranch)) {
+                currentBranch = null;
+            }
+
+            if (current.getIndex() > next.getIndex() || current.getId().equals(next.getId())) {
+                continue;
+            }
+
+            connections.add(new ConnectionBPMNEntity(
+                current.getId(), next.getId(), ConnectionType.SEQUENCE, null, indexDefinition++
+            ));
         }
 
-        return connections.stream()
-            .sorted(Comparator.comparing(ConnectionBPMNEntity::getIndex))
-            .toList();
+        return connections;
     }
+
+    private boolean isElementInsideABranch(String currentId, ElementBranch branch) {
+        if (branch.getType() == BranchType.EXCLUSIVE) {
+            ElementExclusiveBranch exclusiveBranch = (ElementExclusiveBranch) branch;
+            BranchOrder currentBranch = exclusiveBranch.getIdInsideBranches(currentId);
+            return currentBranch != null;
+        }
+        if (branch.getType() == BranchType.PARALLEL) {
+            ElementParallelBranch parallelBranch = (ElementParallelBranch) branch;
+        }
+        return false;
+    }
+
+    private void connectBranchsToNextElement(ElementBranch branch, List<ElementInfo> elements, List<ConnectionBPMNEntity> connections, int indexDefinition) {
+        if (branch.getType() == BranchType.EXCLUSIVE) {
+            ElementExclusiveBranch exclusiveBranch = (ElementExclusiveBranch) branch;
+            String lastGatewayElementId = exclusiveBranch.getLastElementFromBranchs();
+            int index = IntStream.range(0, elements.size())
+                .filter(i -> elements.get(i).getId().equals(lastGatewayElementId))
+                .findFirst()
+                .orElse(-1);
+
+            if (index == -1) {
+                throw new RuntimeException("Could not find any element to create last elements connection");
+            }
+
+            if (index == elements.size() - 1) {
+                return;
+            }
+
+            ElementInfo nextLastElement = elements.get(index + 1);
+
+            if (!exclusiveBranch.hasYesBranchMessageElements()) {
+                connections.add(
+                    new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                );
+            }
+
+            if (!exclusiveBranch.hasNoBranchMessageElements()) {
+                connections.add(
+                    new ConnectionBPMNEntity(exclusiveBranch.getLastNoElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                );
+            }
+
+        }
+    }
+
+    private boolean areIdsFromDifferentBranches(String currentId, String nextId, ElementBranch branch) {
+        if (branch.getType() == BranchType.EXCLUSIVE) {
+            ElementExclusiveBranch exclusiveBranch = (ElementExclusiveBranch) branch;
+            BranchOrder currentBranch = exclusiveBranch.getIdInsideBranches(currentId);
+            BranchOrder nextBranch = exclusiveBranch.getIdInsideBranches(nextId);
+            return currentBranch != nextBranch;
+        }
+        if (branch.getType() == BranchType.PARALLEL) {
+            ElementParallelBranch parallelBranch = (ElementParallelBranch) branch;
+        }
+        return false;
+    }
+
+    private void handleConnectionsByBranchType(List<ConnectionBPMNEntity> connections, ElementBranch branch, int indexDefinition, ElementInfo current) {
+        if (branch.getType() == BranchType.EXCLUSIVE) {
+            handleExclusiveBranchCreation(connections, (ElementExclusiveBranch) branch, indexDefinition, current);
+        }
+        if (branch.getType() == BranchType.PARALLEL) {
+            // handleParallelBranchCreation(connections, (ElementParallelBranch) branch, indexDefinition, current);
+        }
+    }
+
+    private void handleExclusiveBranchCreation(List<ConnectionBPMNEntity> connections, ElementExclusiveBranch branch, int indexDefinition, ElementInfo current) {
+        if (!(branch.getYesChildrenIdsMap().isEmpty())) {
+            String firstYes = branch.getFirstYesElement();
+            connections.add(new ConnectionBPMNEntity(
+                current.getId(), firstYes, ConnectionType.EXCLUSIVE, "true", indexDefinition++
+            ));
+        }
+
+        if (!branch.getNoChildrenIdsMap().isEmpty()) {
+            String firstNo = branch.getFirstNoElement();
+            connections.add(new ConnectionBPMNEntity(
+                current.getId(), firstNo, ConnectionType.EXCLUSIVE, "false", indexDefinition++
+            ));
+        }
+    }
+
+    private Optional<ElementBranch> findBranchForGateway(String gatewayId, List<ElementBranch> branches) {
+        return branches.stream()
+            .filter(b -> b instanceof ElementBranch)
+            .map(b -> (ElementBranch) b)
+            .filter(b -> b.getGatewayId().equals(gatewayId))
+            .findFirst();
+    } 
 
 
     private void throwIfEntitiesWereNotCreated(List<String> ids) {

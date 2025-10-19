@@ -122,6 +122,7 @@
 				</executions>
 				<configuration>
 					<sourceDirectory>${basedir}/src/main/antlr4</sourceDirectory>
+					<outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
 				</configuration>
 			</plugin>
 		</plugins>

@@ -23,6 +23,7 @@ import lombok.NoArgsConstructor;
 public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
     private ConcurrentHashMap<String, CommonBPMNIdEntity> entities = new ConcurrentHashMap<>();
     private List<ConnectionBPMNEntity> connectionsBetweenEntities = new ArrayList<>();
+    // TODO: Create branches entities
 
     @Override
     public void addEntity(CommonBPMNIdEntity entity) {
@@ -50,6 +51,9 @@ public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
     @Override
     public void resetConnections() {
         this.connectionsBetweenEntities.clear();
+        this.connectionsBetweenEntities = new ArrayList<>();
+        this.entities.clear();
+        this.entities = new ConcurrentHashMap<>();
     }
 
     @Override

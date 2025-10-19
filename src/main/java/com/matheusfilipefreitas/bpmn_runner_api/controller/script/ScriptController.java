@@ -17,32 +17,8 @@ import lombok.AllArgsConstructor;
 public class ScriptController {
     private final ScriptService service; 
 
-    @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_XML_VALUE)
     public String executeScript(@RequestBody String code) {
-            String script = """
-                pool(cliente, "Cliente") {
-                    process(procCliente, "Fluxo do Cliente") { 
-                        start(s1); 
-                        task(t1, "Preencher pedido", USER); 
-                        task(t2, "Enviar pedido", AUTOMATED) -> message(t3);
-                        end(e1); 
-                    } 
-                } 
-                pool(loja, "Loja Online") { 
-                    process(procLoja, "Fluxo da Loja") { 
-                        start(s2); 
-                        task(t3, "Receber pedido", MANUAL); 
-                        gateway(g1, "Verificar estoque", EXCLUSIVE) { 
-                            yes -> {
-                                task(t4, "Enviar nota fiscal", USER);
-                            }
-                            no -> task(t5, "Informar indisponibilidade", AUTOMATED) -> message(t1); 
-                        }; 
-                        end(e2); 
-                    } 
-                }
-                """;
-            
-            return service.processScript(script);
+        return service.processScript(code);
     }
 }

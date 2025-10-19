@@ -2,7 +2,6 @@
 
 package com.matheusfilipefreitas.bpmn_runner_api.model.script.grammar;
 
-
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;

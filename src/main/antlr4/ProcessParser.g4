@@ -11,9 +11,9 @@ model: pool+;
 pool: 'pool' LPAREN ID COMMA STRING RPAREN LBRACE process RBRACE;
 
 process: 'process' LPAREN ID COMMA STRING RPAREN 
-         LBRACE startRule flowElement+ endRule+ RBRACE;
+         LBRACE startRule? flowElement* endRule* RBRACE;
 
-flowElement: taskRef;
+flowElement: taskRef | gatewayRule | endRule;
 
 taskRule: 'task' LPAREN ID COMMA STRING COMMA TaskType RPAREN;
 

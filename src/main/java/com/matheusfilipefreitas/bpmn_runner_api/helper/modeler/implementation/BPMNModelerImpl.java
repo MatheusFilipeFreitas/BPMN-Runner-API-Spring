@@ -79,7 +79,7 @@ public class BPMNModelerImpl implements BPMNModeler {
 
     private void handleParallel(ConnectionBPMNEntity connection, BpmnModelInstance model) {
         FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
-        String gatewayId = "parallel_gw_from_" + sourceNode.getId();
+        String gatewayId = sourceNode.getId();
 
         org.camunda.bpm.model.bpmn.instance.Gateway gateway = findGateway(model, gatewayId);
         FlowNode targetNode = model.getModelElementById(connection.getTargetId());
@@ -88,7 +88,7 @@ public class BPMNModelerImpl implements BPMNModeler {
 
     private void handleExclusive(ConnectionBPMNEntity connection, BpmnModelInstance model) {
         FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
-        String gatewayId = "exclusive_gw_from_" + sourceNode.getId();
+        String gatewayId = sourceNode.getId();
 
         org.camunda.bpm.model.bpmn.instance.Gateway gateway = findGateway(model, gatewayId);
 

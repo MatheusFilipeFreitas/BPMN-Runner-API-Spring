@@ -1,5 +1,6 @@
 package com.matheusfilipefreitas.bpmn_runner_api.service.script.implementation;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr.v4.runtime.CharStreams;
@@ -15,8 +16,11 @@ import com.matheusfilipefreitas.bpmn_runner_api.common.listener.SyntaxErrorListe
 import com.matheusfilipefreitas.bpmn_runner_api.helper.builder.BPMNBuilder;
 import com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.BPMNModeler;
 import com.matheusfilipefreitas.bpmn_runner_api.helper.validators.ElementIdsValidator;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Pool;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Process;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementInfo;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.grammar.ProcessLexer;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.grammar.ProcessParser;
@@ -35,6 +39,8 @@ public class ScriptServiceImpl implements ScriptService {
 
     private ProcessParser.ModelContext context = null;
     private BpmnModelInstance model = null;
+    private List<ElementInfo> elementsInfo = new ArrayList<>();
+    private List<ElementBranch> elementsBranchInfo = new ArrayList<>();
 
     public ScriptServiceImpl(
         ElementIdsValidator idsValidator, 
@@ -53,17 +59,33 @@ public class ScriptServiceImpl implements ScriptService {
     public String processScript(String script) {
         try {
             validateScriptSyntax(script);
-            List<ElementInfo> elementsInfo = validateIdsCreation();
+            validateIdsCreation();
+            
+            if (elementsInfo.isEmpty()) {
+                throw new InterpreterException("No entities found");
+            }
+
             createEntitiesFromElementsInfo(elementsInfo);
-            createConnectionsFromElementsInfo(elementsInfo);
+            createConnectionsFromElementsInfo(elementsInfo, elementsBranchInfo);
+
+            throwIfNotAllElementAreInConnections();
 
             handleModelCreation();
 
             throwIfCannotGetModeler();
-            return Bpmn.convertToString(this.model);
+            String result = Bpmn.convertToString(this.model);
+            resetVariables();
+            return result;
         } catch (InterpreterException ex) {
             throw ex;
         }
+    }
+
+    private void resetVariables() {
+        this.model = null;
+        this.context = null;
+        this.elementService.clearEntities();
+        this.connectionService.resetConnections();
     }
     
     private void validateScriptSyntax(String script) {
@@ -81,7 +103,7 @@ public class ScriptServiceImpl implements ScriptService {
         }
     }
 
-    private List<ElementInfo> validateIdsCreation() {
+    private void validateIdsCreation() {
         try {        
             if (this.context == null) {
                 throw new RuntimeException("Context creation with error");
@@ -89,10 +111,29 @@ public class ScriptServiceImpl implements ScriptService {
             IdCollectorListener listener = new IdCollectorListener();
             ParseTreeWalker.DEFAULT.walk(listener, this.context);
 
-            List<ElementInfo> elementsInfo = listener.getElements();
+            listener.validate();
+
+            elementsInfo = listener.getElements();
+            elementsBranchInfo = listener.getElementBranchs();
+
             idsValidator.validate(elementsInfo);
-            return elementsInfo;
         } catch (Exception ex) {
+            throw ex;
+        }
+    }
+
+    private void throwIfNotAllElementAreInConnections() {
+        try {
+            List<CommonBPMNIdEntity> entities = this.elementService.findAll();
+            List<ConnectionBPMNEntity> connections = this.connectionService.findAll();
+
+            if (entities.isEmpty() || connections.isEmpty()) {
+                throw new RuntimeException("No elements or flows created");
+            }
+
+            List<String> elementsIds = entities.stream().filter(e -> !(e instanceof Pool) && !(e instanceof Process)).map(e -> e.getId()).toList();
+            idsValidator.validateAllElementsInConnections(elementsIds, connections);
+        } catch(Exception ex) {
             throw ex;
         }
     }
@@ -101,15 +142,17 @@ public class ScriptServiceImpl implements ScriptService {
         try {
             this.elementService.saveEntitiesFromElementInfoList(elementsInfo);
         } catch (Exception e) {
-            this.elementService.clearEntities();
+            resetVariables();
+            throw new RuntimeException("Error while creating elements");
         }
     }
 
-    private void createConnectionsFromElementsInfo(List<ElementInfo> elementsInfo) {
+    private void createConnectionsFromElementsInfo(List<ElementInfo> elementsInfo, List<ElementBranch> branchesInfo) {
         try {
-            this.connectionService.saveConnectionsFromElementInfo(elementsInfo);
+            this.connectionService.saveConnectionsFromElementInfo(elementsInfo, branchesInfo);
         } catch (Exception e) {
-            this.connectionService.resetConnections();
+            resetVariables();
+            throw new RuntimeException("Error while creating connections");
         }
     }
 
@@ -120,7 +163,6 @@ public class ScriptServiceImpl implements ScriptService {
         }
         createEntitiesInModel();
         createConnectionsInModel();
-        System.out.println(Bpmn.convertToString(this.model));
     }
 
     private BpmnModelInstance createModel() {

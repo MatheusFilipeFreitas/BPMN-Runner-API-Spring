@@ -13,8 +13,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GatewayContainer {
-    private String startLine;
-    private String endLine;
     private String label;
     private List<String> composeIds;
 }
