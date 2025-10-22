@@ -37,7 +37,7 @@ deploy-job:
     - az webapp deploy --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_WEB_APP_NAME --src-path "$ARTIFACT" --type jar --timeout 900
     - echo "Waiting for application to become healthy..."
     - for i in {1..30}; do
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$AZURE_WEB_APP_NAME.azurewebsites.net/api/actuator/health" || true);
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$AZURE_SITE_URL/api/actuator/health" || true);
         if [ "$STATUS" = "200" ]; then
           echo "✅ Application is healthy!";
           exit 0;
