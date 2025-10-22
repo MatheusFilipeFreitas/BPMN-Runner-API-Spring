@@ -1,22 +1,29 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.script;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.matheusfilipefreitas.bpmn_runner_api.service.script.ScriptService;
+
 import lombok.AllArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.web.bind.annotation.*;
 
 @AllArgsConstructor
 
 @RestController
 @RequestMapping("script")
 public class ScriptController {
+    private final ScriptService service; 
 
-    @GetMapping("/execute")
-    public String executeScript() {
-        return "Excute script endpoint called";
-    }
-
-    @GetMapping("/validate")
-    public String validateScript() {
-        return "Validate script endpoint called";
+    @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_XML_VALUE)
+    public ResponseEntity<String> executeScript(@RequestBody String code, @AuthenticationPrincipal String uid) {
+        String result = service.processScript(code);
+        return ResponseEntity.ok(result);
     }
 }

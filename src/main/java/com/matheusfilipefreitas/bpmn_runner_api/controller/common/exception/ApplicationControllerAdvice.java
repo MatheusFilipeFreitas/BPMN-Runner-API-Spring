@@ -8,13 +8,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
+import java.util.List;
+
 @RestControllerAdvice
 public class ApplicationControllerAdvice {
 
     @ExceptionHandler(InterpreterException.class)
     @ResponseStatus(BAD_REQUEST)
     public ApiErrors handlerInterpreterException (InterpreterException exception) {
-        String messageError = exception.getMessage();
-        return new ApiErrors(messageError);
+        List<String> errors = exception.getErrors();
+        return new ApiErrors(errors);
     }
 }
