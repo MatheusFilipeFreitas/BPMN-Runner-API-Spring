@@ -1,6 +1,7 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.api;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 // import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +13,7 @@ import com.matheusfilipefreitas.bpmn_runner_api.security.AllowedOrigins;
 
 @RestController
 @RequestMapping("/admin/cache")
+@Profile("!test")
 @CrossOrigin(origins = "*") 
 public class CorsController {
 
