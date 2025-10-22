@@ -1,11 +1,16 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.api;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +29,8 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.dto.CreateKeyRequest;
 import com.matheusfilipefreitas.bpmn_runner_api.service.api.ApiKeyService;
 
 @RestController
-@RequestMapping("/api/keys")
+@RequestMapping("/keys")
+@CrossOrigin(origins = "*")
 public class ApiKeyController {
     private final Firestore firestore;
     private final ApiKeyService apiKeyService;
@@ -48,8 +54,8 @@ public class ApiKeyController {
 
     @GetMapping
     public ResponseEntity<?> listKeys(@AuthenticationPrincipal String uid) throws ExecutionException, InterruptedException {
-        if (uid == null || uid.isBlank()) {
-            return ResponseEntity.status(401).body("Unauthorized");
+        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
         }
 
         CollectionReference col = firestore.collection("users").document(uid).collection("apiKeys");
@@ -63,13 +69,12 @@ public class ApiKeyController {
 
                     ApiKeyRecord rec = new ApiKeyRecord(
                         documentId,
-                        docData.keyId(),
-                        docData.createdAt(),
-                        docData.expiresAt(),
-                        docData.requestCount(),
-                        docData.allowedOrigins()
+                        docData.getKey(),
+                        docData.getCreatedAt(),
+                        docData.getExpiresAt(),
+                        docData.getRequestCount(),
+                        docData.getAllowedOrigins()
                     );
-
                     return rec;
                 })
                 .collect(Collectors.toList());

@@ -84,6 +84,15 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             ElementInfo current = elements.get(i);
             ElementInfo next = elements.get(i + 1);
 
+            List<ConnectionBPMNEntity> duplicatedConnection = connections.stream().filter(c -> c.getSourceId() == current.getId()).toList();
+            if (duplicatedConnection.size() > 0) {
+                int nextIndex = connections.size() + 2;
+                if (nextIndex + 1 >= elements.size()) {
+                    return connections;
+                }
+                continue;
+            }
+
             if (current.getElementType() == ElementType.GATEWAY) {
                 var branchOpt = findBranchForGateway(current.getId(), branches);
                 
@@ -151,10 +160,11 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
 
     private void connectBranchsToNextElement(ElementBranch branch, List<ElementInfo> elements, List<ConnectionBPMNEntity> connections, int indexDefinition) {
         if (branch.getType() == BranchType.EXCLUSIVE) {
+            List<ElementInfo> filteredElements = elements.stream().filter(e -> e.getElementType() != ElementType.MESSAGE && e.getElementType() != ElementType.POOL && e.getElementType() != ElementType.PROCESS).toList();
             ElementExclusiveBranch exclusiveBranch = (ElementExclusiveBranch) branch;
             String lastGatewayElementId = exclusiveBranch.getLastElementFromBranchs();
-            int index = IntStream.range(0, elements.size())
-                .filter(i -> elements.get(i).getId().equals(lastGatewayElementId))
+            int index = IntStream.range(0, filteredElements.size())
+                .filter(i -> filteredElements.get(i).getId().equals(lastGatewayElementId))
                 .findFirst()
                 .orElse(-1);
 
@@ -162,11 +172,11 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
                 throw new RuntimeException("Could not find any element to create last elements connection");
             }
 
-            if (index == elements.size() - 1) {
+            if (index == filteredElements.size() - 1) {
                 return;
             }
 
-            ElementInfo nextLastElement = elements.get(index + 1);
+            ElementInfo nextLastElement = filteredElements.get(index + 1);
 
             if (!exclusiveBranch.hasYesBranchMessageElements()) {
                 connections.add(

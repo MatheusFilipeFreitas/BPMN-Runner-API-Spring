@@ -1,7 +1,9 @@
 package com.matheusfilipefreitas.bpmn_runner_api.service.script.implementation;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CodePointCharStream;
@@ -77,6 +79,7 @@ public class ScriptServiceImpl implements ScriptService {
             resetVariables();
             return result;
         } catch (InterpreterException ex) {
+            resetVariables();
             throw ex;
         }
     }
@@ -118,6 +121,7 @@ public class ScriptServiceImpl implements ScriptService {
 
             idsValidator.validate(elementsInfo);
         } catch (Exception ex) {
+            resetVariables();
             throw ex;
         }
     }
@@ -134,6 +138,7 @@ public class ScriptServiceImpl implements ScriptService {
             List<String> elementsIds = entities.stream().filter(e -> !(e instanceof Pool) && !(e instanceof Process)).map(e -> e.getId()).toList();
             idsValidator.validateAllElementsInConnections(elementsIds, connections);
         } catch(Exception ex) {
+            resetVariables();
             throw ex;
         }
     }
@@ -161,26 +166,40 @@ public class ScriptServiceImpl implements ScriptService {
         if (this.model == null) {
             throw new InterpreterException("Could not start modeler");
         }
-        createEntitiesInModel();
-        createConnectionsInModel();
+
+        List<CommonBPMNIdEntity> entities = elementService.findAll().stream()
+            .sorted(Comparator.comparingInt(CommonBPMNIdEntity::getIndex))
+            .collect(Collectors.toList());
+
+        List<ConnectionBPMNEntity> connections = connectionService.findAll().stream()
+            .sorted(Comparator.comparingInt(ConnectionBPMNEntity::getIndex))
+            .collect(Collectors.toList());
+
+        createEntitiesInModel(entities);
+        createConnectionsInModel(connections);
+        createGraphicElementsInModel(entities, connections);
     }
 
     private BpmnModelInstance createModel() {
         return builder.buildModel();
     }
 
-    private void createEntitiesInModel() {
+    private void createEntitiesInModel(List<CommonBPMNIdEntity> entities) {
         throwIfCannotGetModeler();
 
-        List<CommonBPMNIdEntity> entities = elementService.findAll();
         modeler.modelEntitiesIntoModel(this.model, entities);
     }
 
-    private void createConnectionsInModel() {
+    private void createConnectionsInModel(List<ConnectionBPMNEntity> connections) {
         throwIfCannotGetModeler();
 
-        List<ConnectionBPMNEntity> connections = connectionService.findAll();
         modeler.modelConnectionsIntoModel(this.model, connections);
+    }
+
+    private void createGraphicElementsInModel(List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections) {
+        throwIfCannotGetModeler();
+
+        modeler.createDiagramElements(model, entities, connections);
     }
 
     private void throwIfCannotGetModeler() {

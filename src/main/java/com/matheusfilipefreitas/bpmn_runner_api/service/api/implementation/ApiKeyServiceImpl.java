@@ -1,7 +1,10 @@
 package com.matheusfilipefreitas.bpmn_runner_api.service.api.implementation;
 
 import java.time.Instant;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -9,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.stereotype.Service;
 
 import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -41,11 +45,20 @@ public class ApiKeyServiceImpl implements ApiKeyService {
             ApiKeyRecord rec = new ApiKeyRecord(
                 docRef.getId(),
                 key,
-                now,
-                expiry,
+                Timestamp.of(Date.from(now)),
+                Timestamp.of(Date.from(expiry)),
                 0,
                 allowedOrigins);
-                docRef.set(rec).get();
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("keyId", docRef.getId());
+            data.put("key", key);
+            data.put("createdAt", Date.from(now));
+            data.put("expiresAt", Date.from(expiry));
+            data.put("requestCount", 0L);
+            data.put("allowedOrigins", allowedOrigins);
+
+            docRef.set(data).get();
 
             return rec;
         } catch (Exception e) {
@@ -72,11 +85,11 @@ public class ApiKeyServiceImpl implements ApiKeyService {
 
             ApiKeyRecord rec = new ApiKeyRecord(
                 documentId,
-                docData.key(),
-                docData.createdAt(),
-                docData.expiresAt(),
-                docData.requestCount(),
-                docData.allowedOrigins()
+                docData.getKey(),
+                docData.getCreatedAt(),
+                docData.getExpiresAt(),
+                docData.getRequestCount(),
+                docData.getAllowedOrigins()
             );
 
             DocumentReference docRef = doc.getReference();
@@ -106,12 +119,12 @@ public class ApiKeyServiceImpl implements ApiKeyService {
             ref.update("expiresAt", newExpiry.toString()).get();
 
             ApiKeyRecord rec = new ApiKeyRecord(
-                dataFromDoc.keyId(),
-                dataFromDoc.key(),
-                dataFromDoc.createdAt(),
-                newExpiry,
-                dataFromDoc.requestCount(),
-                dataFromDoc.allowedOrigins()
+                dataFromDoc.getKeyId(),
+                dataFromDoc.getKey(),
+                dataFromDoc.getCreatedAt(),
+                Timestamp.of(Date.from(newExpiry)),
+                dataFromDoc.getRequestCount(),
+                dataFromDoc.getAllowedOrigins()
             );
 
             return rec;

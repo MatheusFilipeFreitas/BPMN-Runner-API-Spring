@@ -2,9 +2,11 @@ package com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.implementation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.util.TriConsumer;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
@@ -15,6 +17,13 @@ import org.camunda.bpm.model.bpmn.instance.InteractionNode;
 import org.camunda.bpm.model.bpmn.instance.MessageFlow;
 import org.camunda.bpm.model.bpmn.instance.Participant;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram;
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge;
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnPlane;
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape;
+import org.camunda.bpm.model.bpmn.instance.dc.Bounds;
+import org.camunda.bpm.model.bpmn.instance.di.Waypoint;
+import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.springframework.stereotype.Component;
 
 import com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.BPMNModeler;
@@ -76,6 +85,173 @@ public class BPMNModelerImpl implements BPMNModeler {
             }
         });
     }
+
+    @Override
+    public void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections) {
+
+        // 1️⃣ Criar ou obter colaboração
+        Collaboration collaboration = model.getModelElementsByType(Collaboration.class)
+            .stream().findFirst().orElse(null);
+
+        if (collaboration == null) {
+            collaboration = model.newInstance(Collaboration.class);
+            collaboration.setId("collaboration_" + System.currentTimeMillis());
+            model.getDefinitions().addChildElement(collaboration);
+        }
+
+        // 2️⃣ Criar BPMNDiagram e BPMNPlane
+        BpmnDiagram diagram = model.newInstance(BpmnDiagram.class);
+        diagram.setId("BPMNDiagram_" + System.currentTimeMillis());
+
+        BpmnPlane plane = model.newInstance(BpmnPlane.class);
+        plane.setId("BPMNPlane_" + System.currentTimeMillis());
+        plane.setBpmnElement(collaboration);
+        diagram.addChildElement(plane);
+
+        // 3️⃣ Agrupar elementos por processo
+        Map<String, List<CommonBPMNIdEntity>> groupedByProcess = entities.stream()
+            .filter(e -> !(e instanceof Pool))
+            .filter(e -> e.getProcessId() != null)
+            .collect(Collectors.groupingBy(CommonBPMNIdEntity::getProcessId));
+
+        // Definições de layout
+        int poolSpacing = 100;
+        int elementSpacingX = 200;
+        int elementSpacingY = 150;
+        int poolPadding = 50;
+        double currentY = 50;
+
+        // Guardar coordenadas para desenhar conexões depois
+        Map<String, Bounds> elementBoundsMap = new HashMap<>();
+
+        // 4️⃣ Criar Pools e seus elementos
+        for (Map.Entry<String, List<CommonBPMNIdEntity>> entry : groupedByProcess.entrySet()) {
+            String processId = entry.getKey();
+            List<CommonBPMNIdEntity> processEntities = entry.getValue();
+
+            Participant participant = model.getModelElementsByType(Participant.class)
+                .stream()
+                .filter(p -> p.getProcess() != null && p.getProcess().getId().equals(processId))
+                .findFirst()
+                .orElse(null);
+
+            String poolId = participant != null ? participant.getId() : "pool_" + processId;
+
+            int x = 150;
+            double maxX = 0;
+            double maxY = currentY;
+
+            for (CommonBPMNIdEntity entity : processEntities) {
+                ModelElementInstance el = model.getModelElementById(entity.getId());
+                if (!(el instanceof FlowNode node)) continue;
+
+                BpmnShape shape = model.newInstance(BpmnShape.class);
+                shape.setId("Shape_" + node.getId());
+                shape.setBpmnElement(node);
+
+                Bounds bounds = model.newInstance(Bounds.class);
+                bounds.setX(x);
+                bounds.setY(currentY + poolPadding);
+                bounds.setWidth(100);
+                bounds.setHeight(80);
+
+                shape.addChildElement(bounds);
+                plane.addChildElement(shape);
+                elementBoundsMap.put(node.getId(), bounds);
+
+                x += elementSpacingX;
+                maxX = Math.max(maxX, bounds.getX() + bounds.getWidth());
+                maxY = Math.max(maxY, bounds.getY() + bounds.getHeight());
+            }
+
+            double poolWidth = maxX - 100 + poolPadding * 2;
+            double poolHeight = (maxY - currentY) + poolPadding * 2;
+
+            // Criar shape da pool
+            BpmnShape poolShape = model.newInstance(BpmnShape.class);
+            poolShape.setId("Shape_" + poolId);
+            poolShape.setBpmnElement(participant);
+            Bounds poolBounds = model.newInstance(Bounds.class);
+            poolBounds.setX(100);
+            poolBounds.setY(currentY);
+            poolBounds.setWidth(poolWidth);
+            poolBounds.setHeight(poolHeight);
+            poolShape.addChildElement(poolBounds);
+            plane.addChildElement(poolShape);
+
+            // Avança para próxima pool (abaixo)
+            currentY += poolHeight + poolSpacing;
+        }
+
+        // 5️⃣ Criar SequenceFlow edges
+        for (ConnectionBPMNEntity connection : connections) {
+            if (connection.getType() == ConnectionType.MESSAGE) continue;
+
+            ModelElementInstance el = model.getModelElementById(
+                "flow_" + connection.getSourceId() + "_" + connection.getTargetId());
+            if (!(el instanceof SequenceFlow flow)) continue;
+
+            Bounds source = elementBoundsMap.get(connection.getSourceId());
+            Bounds target = elementBoundsMap.get(connection.getTargetId());
+            if (source == null || target == null) continue;
+
+            double startX = source.getX() + source.getWidth();
+            double startY = source.getY() + source.getHeight() / 2;
+            double endX = target.getX();
+            double endY = target.getY() + target.getHeight() / 2;
+
+            BpmnEdge edge = model.newInstance(BpmnEdge.class);
+            edge.setId("Edge_" + flow.getId());
+            edge.setBpmnElement(flow);
+
+            Waypoint wp1 = model.newInstance(Waypoint.class);
+            wp1.setX(startX);
+            wp1.setY(startY);
+            Waypoint wp2 = model.newInstance(Waypoint.class);
+            wp2.setX(endX);
+            wp2.setY(endY);
+
+            edge.addChildElement(wp1);
+            edge.addChildElement(wp2);
+            plane.addChildElement(edge);
+        }
+
+        // 6️⃣ Criar MessageFlow edges (entre pools)
+        for (ConnectionBPMNEntity connection : connections) {
+            if (connection.getType() != ConnectionType.MESSAGE) continue;
+
+            ModelElementInstance msgEl = model.getModelElementById(
+                "msg_flow_" + connection.getSourceId() + "_" + connection.getTargetId());
+            if (!(msgEl instanceof MessageFlow msgFlow)) continue;
+
+            Bounds source = elementBoundsMap.get(connection.getSourceId());
+            Bounds target = elementBoundsMap.get(connection.getTargetId());
+            if (source == null || target == null) continue;
+
+            double startX = source.getX() + source.getWidth();
+            double startY = source.getY() + source.getHeight() / 2;
+            double endX = target.getX();
+            double endY = target.getY() + target.getHeight() / 2;
+
+            BpmnEdge edge = model.newInstance(BpmnEdge.class);
+            edge.setId("Edge_" + msgFlow.getId());
+            edge.setBpmnElement(msgFlow);
+
+            Waypoint wp1 = model.newInstance(Waypoint.class);
+            wp1.setX(startX);
+            wp1.setY(startY);
+            Waypoint wp2 = model.newInstance(Waypoint.class);
+            wp2.setX(endX);
+            wp2.setY(endY);
+
+            edge.addChildElement(wp1);
+            edge.addChildElement(wp2);
+            plane.addChildElement(edge);
+        }
+
+        model.getDefinitions().addChildElement(diagram);
+    }
+
 
     private void handleParallel(ConnectionBPMNEntity connection, BpmnModelInstance model) {
         FlowNode sourceNode = model.getModelElementById(connection.getSourceId());

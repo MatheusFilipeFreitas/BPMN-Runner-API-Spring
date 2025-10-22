@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.BranchOrder;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.BranchType;
@@ -70,8 +71,16 @@ public class ElementExclusiveBranch extends ElementBranch {
     }
 
     private String findElementInIndex(LinkedHashMap<String, ElementType> branchs, int index) {
-        if (branchs.isEmpty()) return null;
-        List<String> keys = new ArrayList<>(branchs.keySet());
+        if (branchs == null || branchs.isEmpty()) return null;
+
+        List<String> keys = branchs.entrySet().stream()
+            .filter(entry -> entry.getValue() != ElementType.MESSAGE)
+            .map(Map.Entry::getKey)
+            .toList();
+
+        index = keys.size() - 1;
+
+        if (index < 0 || index >= keys.size()) return null;
         return keys.get(index);
     }
 
