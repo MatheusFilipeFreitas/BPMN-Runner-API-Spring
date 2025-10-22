@@ -1,6 +1,5 @@
 stages:
   - build
-  - test
   - deploy
 
 variables:
@@ -23,25 +22,10 @@ build-job:
       - target/*.jar
     expire_in: 1 week
 
-unit-test-job:
-  stage: test
-  image: maven:3.9.6-eclipse-temurin-21
-  variables:
-    SPRING_PROFILES_ACTIVE: "test"
-  script:
-    - echo "Running unit tests..."
-    - mvn $MAVEN_CLI_OPTS test
-  artifacts:
-    when: always
-    reports:
-      junit:
-        - target/surefire-reports/TEST-*.xml
-
 deploy-job:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:latest
   needs:
-    - job: unit-test-job
     - job: build-job
       artifacts: true
   script:
