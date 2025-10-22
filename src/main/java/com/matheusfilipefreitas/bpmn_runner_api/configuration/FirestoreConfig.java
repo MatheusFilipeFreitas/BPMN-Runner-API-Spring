@@ -4,12 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.FirebaseApp;
@@ -20,23 +22,18 @@ import com.google.firebase.cloud.FirestoreClient;
 @Configuration
 public class FirestoreConfig {
 
-    @Value("${firebase.credentials:}")
-    private String firebaseCredentials;
-
     @Bean
-    public FirebaseApp firebaseApp() throws IOException {
-        FirebaseApp existingApp = getExistingFirebaseApp();
-        if (existingApp != null) {
-            return existingApp;
-        }
-
+    public FirebaseApp firebaseApp() throws Exception {
         InputStream credentialsStream = getCredentialsInputStream();
 
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(credentialsStream))
                 .build();
 
-        return FirebaseApp.initializeApp(options);
+        if (FirebaseApp.getApps().isEmpty()) {
+            return FirebaseApp.initializeApp(options);
+        }
+        return FirebaseApp.getApps().get(0);
     }
 
     @Bean
@@ -50,23 +47,43 @@ public class FirestoreConfig {
     }
 
     private InputStream getCredentialsInputStream() throws IOException {
-        String creds = System.getenv("FIREBASE_CREDENTIALS");
-
-        if (creds != null && !creds.isBlank()) {
-            return new ByteArrayInputStream(creds.getBytes(StandardCharsets.UTF_8));
+        InputStream fileStream = getClass().getClassLoader()
+                .getResourceAsStream("bpmn-runner-account.json");
+        if (fileStream != null) {
+            System.out.println("📄 Firebase credentials loaded from local file.");
+            return fileStream;
         }
 
-        if (firebaseCredentials != null && !firebaseCredentials.isBlank()) {
-            return new ByteArrayInputStream(firebaseCredentials.getBytes(StandardCharsets.UTF_8));
-        }
+        System.out.println("🌍 Firebase credentials loaded from environment variables.");
 
-        throw new IOException("Firebase credentials not found in environment or application.properties");
+        String base64Key = System.getenv("FIREBASE_PRIVATE_KEY");
+        String privateKey = decodeBase64PrivateKey(base64Key);
+
+        Map<String, Object> creds = Map.ofEntries(
+                Map.entry("type", System.getenv("FIREBASE_TYPE")),
+                Map.entry("project_id", System.getenv("FIREBASE_PROJECT_ID")),
+                Map.entry("private_key_id", System.getenv("FIREBASE_PRIVATE_KEY_ID")),
+                Map.entry("private_key", privateKey),
+                Map.entry("client_email", System.getenv("FIREBASE_CLIENT_EMAIL")),
+                Map.entry("client_id", System.getenv("FIREBASE_CLIENT_ID")),
+                Map.entry("auth_uri", System.getenv("FIREBASE_AUTH_URI")),
+                Map.entry("token_uri", System.getenv("FIREBASE_TOKEN_URI")),
+                Map.entry("auth_provider_x509_cert_url", System.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL")),
+                Map.entry("client_x509_cert_url", System.getenv("FIREBASE_CLIENT_CERT_URL")),
+                Map.entry("universe_domain", System.getenv("FIREBASE_UNIVERSE_DOMAIN"))
+        );
+
+        String json = new ObjectMapper().writeValueAsString(creds);
+        return new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
     }
 
-    private FirebaseApp getExistingFirebaseApp() {
-        if (!FirebaseApp.getApps().isEmpty()) {
-            return FirebaseApp.getApps().get(0);
+    private String decodeBase64PrivateKey(String base64Key) {
+        if (base64Key == null || base64Key.isBlank()) {
+            throw new IllegalStateException("FIREBASE_PRIVATE_KEY_BASE64 environment variable is missing.");
         }
-        return null;
+
+        byte[] decodedBytes = Base64.getDecoder().decode(base64Key);
+        String decoded = new String(decodedBytes, StandardCharsets.UTF_8);
+        return decoded.replace("\\n", "\n");
     }
 }
