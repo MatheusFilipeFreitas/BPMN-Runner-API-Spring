@@ -30,7 +30,7 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.dto.CreateKeyRequest;
 import com.matheusfilipefreitas.bpmn_runner_api.service.api.ApiKeyService;
 
 @RestController
-@Profile("!dev")
+@Profile("!test")
 @RequestMapping("/keys")
 @CrossOrigin(origins = "*")
 public class ApiKeyController {
