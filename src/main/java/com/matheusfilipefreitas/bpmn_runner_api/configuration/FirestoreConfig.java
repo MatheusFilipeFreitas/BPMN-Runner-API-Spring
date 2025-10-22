@@ -18,7 +18,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.cloud.FirestoreClient;
 
 @Configuration
-@Profile("!test")
 public class FirestoreConfig {
 
     @Value("${firebase.credentials:}")

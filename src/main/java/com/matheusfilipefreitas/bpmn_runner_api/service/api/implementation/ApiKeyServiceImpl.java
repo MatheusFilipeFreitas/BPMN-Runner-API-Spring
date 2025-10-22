@@ -25,7 +25,6 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.api.ApiKeyRecord;
 import com.matheusfilipefreitas.bpmn_runner_api.model.api.ApiKeyWithOwner;
 import com.matheusfilipefreitas.bpmn_runner_api.service.api.ApiKeyService;
 
-@Profile("!test")
 @Service
 public class ApiKeyServiceImpl implements ApiKeyService {
     private final Firestore firestore;

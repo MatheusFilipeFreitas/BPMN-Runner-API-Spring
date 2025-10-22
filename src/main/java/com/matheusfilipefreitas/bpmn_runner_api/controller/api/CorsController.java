@@ -13,7 +13,6 @@ import com.matheusfilipefreitas.bpmn_runner_api.security.AllowedOrigins;
 
 @RestController
 @RequestMapping("/admin/cache")
-@Profile("!test")
 @CrossOrigin(origins = "*") 
 public class CorsController {
 
