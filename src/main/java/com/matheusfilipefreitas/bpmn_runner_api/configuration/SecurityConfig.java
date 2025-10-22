@@ -17,7 +17,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
-@Profile("!test")
 @EnableWebSecurity
 public class SecurityConfig {
 

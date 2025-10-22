@@ -22,7 +22,6 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 
-@Profile("!test")
 @Component
 public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
     private final FirebaseAuth firebaseAuth;
