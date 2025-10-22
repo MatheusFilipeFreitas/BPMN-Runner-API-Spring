@@ -10,4 +10,5 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.Connection
 public interface BPMNModeler {
     void modelEntitiesIntoModel(BpmnModelInstance model, List<CommonBPMNIdEntity> entities);
     void modelConnectionsIntoModel(BpmnModelInstance model, List<ConnectionBPMNEntity> connections);
+    void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections);
 }

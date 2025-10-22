@@ -22,11 +22,7 @@ public class ScriptController {
     private final ScriptService service; 
 
     @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_XML_VALUE)
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> executeScript(@RequestBody String code, @AuthenticationPrincipal String uid) {
-        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
-        }
         String result = service.processScript(code);
         return ResponseEntity.ok(result);
     }
