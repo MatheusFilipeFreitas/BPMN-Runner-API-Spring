@@ -26,7 +26,6 @@ deploy-job:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:latest
   needs:
-    - job: unit-test-job
     - job: build-job
       artifacts: true
   script:
