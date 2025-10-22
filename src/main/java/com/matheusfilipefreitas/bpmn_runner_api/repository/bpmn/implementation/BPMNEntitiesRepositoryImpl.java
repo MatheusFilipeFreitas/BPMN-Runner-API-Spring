@@ -1,37 +1,46 @@
 package com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn.implementation;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Repository;
+
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn.BPMNEntitiesRepository;
+
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @AllArgsConstructor
 @NoArgsConstructor
 
 @Repository
 public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
-
     private ConcurrentHashMap<String, CommonBPMNIdEntity> entities = new ConcurrentHashMap<>();
-    private ArrayList<ConnectionBPMNEntity> connectionsBetweenEntities = new ArrayList();
+    private List<ConnectionBPMNEntity> connectionsBetweenEntities = new ArrayList<>();
+    // TODO: Create branches entities
 
+    @Override
     public void addEntity(CommonBPMNIdEntity entity) {
         this.entities.put(entity.getId(), entity);
     }
 
+    @Override
     public void deleteEntity(String id) {
         this.entities.remove(id);
     }
 
-    public void addConnection(String entityId1, String entityId2) {
-        this.connectionsBetweenEntities.add(new ConnectionBPMNEntity(entityId1, entityId2));
+    @Override
+    public void addConnection(ConnectionBPMNEntity connection) {
+        this.connectionsBetweenEntities.add(connection);
     }
 
+    @Override
     public Optional<ConnectionBPMNEntity> getConnectionByEntityId(String id) {
         return this.connectionsBetweenEntities
                 .stream()
@@ -39,7 +48,34 @@ public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
                 .findFirst();
     }
 
+    @Override
     public void resetConnections() {
         this.connectionsBetweenEntities.clear();
+        this.connectionsBetweenEntities = new ArrayList<>();
+        this.entities.clear();
+        this.entities = new ConcurrentHashMap<>();
+    }
+
+    @Override
+    public void resetEntities() {
+        this.entities.clear();
+    }
+
+    @Override
+    public List<CommonBPMNIdEntity> getAllEntities() {
+        return this.entities.values()
+            .stream()
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<CommonBPMNIdEntity> getEntityById(String id) {
+        return Optional.ofNullable(this.entities.get(id));
+    }
+
+    @Override
+    public List<ConnectionBPMNEntity> getAllConnections() {
+        return this.connectionsBetweenEntities;
     }
 }

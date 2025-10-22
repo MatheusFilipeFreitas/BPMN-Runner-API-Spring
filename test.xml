@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions_cbca290a-4c65-4d33-8564-fe5ffb1eada5" targetNamespace="http://camunda.org/examples" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+    <process id="procCliente" isExecutable="true" name="">
+        <startEvent id="s1"/>
+        <userTask id="t1" name="Preencher pedido"/>
+        <serviceTask id="t2" name="Enviar pedido"/>
+        <sequenceFlow id="flow_s1_t1" sourceRef="s1" targetRef="t1"/>
+        <sequenceFlow id="flow_t1_t2" sourceRef="t1" targetRef="t2"/>
+    </process>
+    <collaboration id="collaboration_1761089945351">
+        <participant id="cliente" name="Cliente" processRef="procCliente"/>
+        <participant id="loja" name="Loja Online" processRef="procLoja"/>
+        <messageFlow id="msg_flow_t2_t3" name="" sourceRef="t2" targetRef="t3"/>
+        <messageFlow id="msg_flow_t5_t1" name="" sourceRef="t5" targetRef="t1"/>
+    </collaboration>
+    <process id="procLoja" isExecutable="true" name="">
+        <manualTask id="t3" name="Receber pedido"/>
+        <exclusiveGateway id="g1" name="Verificar estoque"/>
+        <userTask id="t4" name="Enviar nota fiscal"/>
+        <serviceTask id="t5" name="Informar indisponibilidade"/>
+        <endEvent id="e2"/>
+        <sequenceFlow id="flow_t3_g1" sourceRef="t3" targetRef="g1"/>
+        <sequenceFlow id="flow_g1_t4" name="true" sourceRef="g1" targetRef="t4">
+            <conditionExpression id="conditionExpression_7e32add6-6294-4418-a283-af21a804fcb3">${true}</conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow_t4_e2" sourceRef="t4" targetRef="e2"/>
+        <sequenceFlow id="flow_g1_t5" name="false" sourceRef="g1" targetRef="t5">
+            <conditionExpression id="conditionExpression_f1460166-e0a7-49ec-9533-cf503599f91c">${false}</conditionExpression>
+        </sequenceFlow>
+    </process>
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1761089945355">
+        <bpmndi:BPMNPlane bpmnElement="collaboration_1761089945351" id="BPMNPlane_1761089945355">
+            <bpmndi:BPMNShape bpmnElement="s1" id="Shape_s1">
+                <dc:Bounds height="80.0" width="100.0" x="150.0" y="100.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="t1" id="Shape_t1">
+                <dc:Bounds height="80.0" width="100.0" x="350.0" y="100.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="t2" id="Shape_t2">
+                <dc:Bounds height="80.0" width="100.0" x="550.0" y="100.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="cliente" id="Shape_cliente">
+                <dc:Bounds height="230.0" width="650.0" x="100.0" y="50.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="t3" id="Shape_t3">
+                <dc:Bounds height="80.0" width="100.0" x="150.0" y="430.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="g1" id="Shape_g1">
+                <dc:Bounds height="80.0" width="100.0" x="350.0" y="430.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="t4" id="Shape_t4">
+                <dc:Bounds height="80.0" width="100.0" x="550.0" y="430.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="t5" id="Shape_t5">
+                <dc:Bounds height="80.0" width="100.0" x="750.0" y="430.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="e2" id="Shape_e2">
+                <dc:Bounds height="80.0" width="100.0" x="950.0" y="430.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape bpmnElement="loja" id="Shape_loja">
+                <dc:Bounds height="230.0" width="1050.0" x="100.0" y="380.0"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge bpmnElement="flow_s1_t1" id="Edge_flow_s1_t1">
+                <di:waypoint x="250.0" y="140.0"/>
+                <di:waypoint x="350.0" y="140.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="flow_t1_t2" id="Edge_flow_t1_t2">
+                <di:waypoint x="450.0" y="140.0"/>
+                <di:waypoint x="550.0" y="140.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="flow_t3_g1" id="Edge_flow_t3_g1">
+                <di:waypoint x="250.0" y="470.0"/>
+                <di:waypoint x="350.0" y="470.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="flow_g1_t4" id="Edge_flow_g1_t4">
+                <di:waypoint x="450.0" y="470.0"/>
+                <di:waypoint x="550.0" y="470.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="flow_t4_e2" id="Edge_flow_t4_e2">
+                <di:waypoint x="650.0" y="470.0"/>
+                <di:waypoint x="950.0" y="470.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="flow_g1_t5" id="Edge_flow_g1_t5">
+                <di:waypoint x="450.0" y="470.0"/>
+                <di:waypoint x="750.0" y="470.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="msg_flow_t2_t3" id="Edge_msg_flow_t2_t3">
+                <di:waypoint x="650.0" y="140.0"/>
+                <di:waypoint x="150.0" y="470.0"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge bpmnElement="msg_flow_t5_t1" id="Edge_msg_flow_t5_t1">
+                <di:waypoint x="850.0" y="470.0"/>
+                <di:waypoint x="350.0" y="140.0"/>
+            </bpmndi:BPMNEdge>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</definitions>
