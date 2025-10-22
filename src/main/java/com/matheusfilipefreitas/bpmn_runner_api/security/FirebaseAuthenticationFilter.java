@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 
+@Profile("!dev")
 @Component
 public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
     private final FirebaseAuth firebaseAuth;
