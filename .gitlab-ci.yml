@@ -26,6 +26,8 @@ build-job:
 unit-test-job:
   stage: test
   image: maven:3.9.6-eclipse-temurin-21
+  variables:
+    SPRING_PROFILES_ACTIVE: "test"
   script:
     - echo "Running unit tests..."
     - mvn $MAVEN_CLI_OPTS test
