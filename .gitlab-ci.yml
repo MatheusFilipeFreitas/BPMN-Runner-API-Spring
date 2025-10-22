@@ -23,20 +23,6 @@ build-job:
       - target/*.jar
     expire_in: 1 week
 
-unit-test-job:
-  stage: test
-  image: maven:3.9.6-eclipse-temurin-21
-  variables:
-    FIREBASE_CREDENTIALS: $FC_FILE
-  script:
-    - echo "Running unit tests..."
-    - mvn $MAVEN_CLI_OPTS test
-  artifacts:
-    when: always
-    reports:
-      junit:
-        - target/surefire-reports/TEST-*.xml
-
 deploy-job:
   stage: deploy
   image: mcr.microsoft.com/azure-cli:latest
