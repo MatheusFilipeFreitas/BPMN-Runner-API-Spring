@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import com.google.api.core.ApiFuture;
@@ -24,6 +25,7 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.api.ApiKeyRecord;
 import com.matheusfilipefreitas.bpmn_runner_api.model.api.ApiKeyWithOwner;
 import com.matheusfilipefreitas.bpmn_runner_api.service.api.ApiKeyService;
 
+@Profile("!test")
 @Service
 public class ApiKeyServiceImpl implements ApiKeyService {
     private final Firestore firestore;
