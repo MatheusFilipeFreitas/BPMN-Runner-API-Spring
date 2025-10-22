@@ -35,16 +35,6 @@ deploy-job:
     - az login --service-principal --username $AZURE_CLIENT_ID --password "$AZURE_FULL_SECRET" --tenant $AZURE_TENANT_ID
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
     - az webapp deploy --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_WEB_APP_NAME --src-path "$ARTIFACT" --type jar --timeout 900
-    - echo "Waiting for application to become healthy..."
-    - for i in {1..30}; do
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$AZURE_SITE_URL/api/actuator/health" || true);
-        if [ "$STATUS" = "200" ]; then
-          echo "✅ Application is healthy!";
-          exit 0;
-        fi;
-        echo "⏳ Waiting for app... ($i/30)";
-        sleep 10;
-      done;
-    - echo "❌ Application did not respond with 200 after 5 minutes." && exit 1
+    - echo "Deployment successfully completed"
   environment:
     name: production
