@@ -1,4 +1,4 @@
-package com.matheusfilipefreitas.bpmn_runner_api.security;
+package com.matheusfilipefreitas.bpmn_runner_api.security.rate;
 
 import java.io.IOException;
 import java.time.Duration;

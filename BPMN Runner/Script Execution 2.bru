@@ -1,0 +1,39 @@
+meta {
+  name: Script Execution 2
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{url}}/api/script/execute
+  body: text
+  auth: inherit
+}
+
+headers {
+  ~Origin: http:localhost:4200
+  ~X-Api-Key: 
+}
+
+body:text {
+  // Simple sample:
+  pool(p1, "Pool test") {
+      process(pc1, "Process test") {
+          start(s1);
+          gateway(g1, "Teste", PARALLEL) {
+              scope -> {
+                  task(t1, "Manual test", MANUAL);
+              }
+              scope -> {
+                  task(t2, "Manual test 2", USER);
+              }
+          };
+          end(e1);
+      }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

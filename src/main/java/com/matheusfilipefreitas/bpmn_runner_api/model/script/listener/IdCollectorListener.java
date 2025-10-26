@@ -1,10 +1,8 @@
 package com.matheusfilipefreitas.bpmn_runner_api.model.script.listener;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -88,6 +86,16 @@ public class IdCollectorListener extends ProcessParserBaseListener {
         String currentProcessId = processContextStack.peek();
         Integer line = ctx.ID().getSymbol().getLine();
         elements.add(new ElementInfo(id, ElementType.GATEWAY, label, type, currentProcessId, line));
+        if (ctx.GatewayType().getText().equals("PARALLEL")) {
+            for (var scopeCtx : ctx.parallelScope()) {
+                var branchElements = new ArrayList<LinkedHashMap<String, ElementType>>();
+                for (var flow : scopeCtx.flowElement()) {
+                    branchElements.add(extractIdsFromFlowElement(flow));
+                }
+                String gatewayId = ctx.ID().getText();
+                branches.add(new ElementParallelBranch(gatewayId, branchElements));
+            }
+        }
     }
 
     @Override
@@ -143,11 +151,10 @@ public class IdCollectorListener extends ProcessParserBaseListener {
         return result;
     }
 
-    @SuppressWarnings("unused")
-    private Map<String, ElementType> extractIdsFromFlowElement(ProcessParser.FlowElementContext ctx) {
-        if (ctx == null) return new HashMap<>();
+    private LinkedHashMap<String, ElementType> extractIdsFromFlowElement(ProcessParser.FlowElementContext ctx) {
+        if (ctx == null) return new LinkedHashMap<>();
 
-        Map<String, ElementType> ids = new HashMap<>();
+        LinkedHashMap<String, ElementType> ids = new LinkedHashMap<>();
         var taskRef = ctx.taskRef();
 
         if (taskRef == null) {
@@ -157,7 +164,7 @@ public class IdCollectorListener extends ProcessParserBaseListener {
                     ids.put(id, ElementType.END_EVENT);
                 }
             }else{
-                return new HashMap<>();
+                return new LinkedHashMap<>();
             }
         }
 
@@ -204,33 +211,6 @@ public class IdCollectorListener extends ProcessParserBaseListener {
 
         return ids;
     }
-
-    @Override
-    public void exitParallelScope(ProcessParser.ParallelScopeContext ctx) {
-        List<ProcessParser.FlowElementContext> elements = ctx.flowElement();
-        Map<String, ElementType> result = new HashMap<>();
-        for (var e : elements) {
-            result.putAll(extractIdsFromFlowElement(e));
-        }
-
-        ProcessParser.GatewayRuleContext gatewayCtx = null;
-        ParserRuleContext parent = ctx.getParent();
-        while (parent != null) {
-            if (parent instanceof ProcessParser.GatewayRuleContext gw) {
-                gatewayCtx = gw;
-                break;
-            }
-            parent = parent.getParent();
-        }
-
-        if (gatewayCtx != null) {
-            String gatewayId = gatewayCtx.ID().getText();
-            branches.add(new ElementParallelBranch(gatewayId, result));
-        } else {
-            throw new InterpreterException("parallel branch without gateway as parent detected " + ctx.getRuleIndex());
-        }
-    }
-
 
     @Override
     public void exitStartRule(ProcessParser.StartRuleContext ctx) {

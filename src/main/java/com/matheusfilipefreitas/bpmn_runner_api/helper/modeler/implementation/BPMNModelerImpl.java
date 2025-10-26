@@ -88,8 +88,6 @@ public class BPMNModelerImpl implements BPMNModeler {
 
     @Override
     public void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections) {
-
-        // 1️⃣ Criar ou obter colaboração
         Collaboration collaboration = model.getModelElementsByType(Collaboration.class)
             .stream().findFirst().orElse(null);
 
@@ -99,7 +97,6 @@ public class BPMNModelerImpl implements BPMNModeler {
             model.getDefinitions().addChildElement(collaboration);
         }
 
-        // 2️⃣ Criar BPMNDiagram e BPMNPlane
         BpmnDiagram diagram = model.newInstance(BpmnDiagram.class);
         diagram.setId("BPMNDiagram_" + System.currentTimeMillis());
 
@@ -108,23 +105,19 @@ public class BPMNModelerImpl implements BPMNModeler {
         plane.setBpmnElement(collaboration);
         diagram.addChildElement(plane);
 
-        // 3️⃣ Agrupar elementos por processo
         Map<String, List<CommonBPMNIdEntity>> groupedByProcess = entities.stream()
             .filter(e -> !(e instanceof Pool))
             .filter(e -> e.getProcessId() != null)
             .collect(Collectors.groupingBy(CommonBPMNIdEntity::getProcessId));
 
-        // Definições de layout
         int poolSpacing = 100;
         int elementSpacingX = 200;
         int elementSpacingY = 150;
         int poolPadding = 50;
         double currentY = 50;
 
-        // Guardar coordenadas para desenhar conexões depois
         Map<String, Bounds> elementBoundsMap = new HashMap<>();
 
-        // 4️⃣ Criar Pools e seus elementos
         for (Map.Entry<String, List<CommonBPMNIdEntity>> entry : groupedByProcess.entrySet()) {
             String processId = entry.getKey();
             List<CommonBPMNIdEntity> processEntities = entry.getValue();
@@ -167,7 +160,6 @@ public class BPMNModelerImpl implements BPMNModeler {
             double poolWidth = maxX - 100 + poolPadding * 2;
             double poolHeight = (maxY - currentY) + poolPadding * 2;
 
-            // Criar shape da pool
             BpmnShape poolShape = model.newInstance(BpmnShape.class);
             poolShape.setId("Shape_" + poolId);
             poolShape.setBpmnElement(participant);
@@ -179,11 +171,9 @@ public class BPMNModelerImpl implements BPMNModeler {
             poolShape.addChildElement(poolBounds);
             plane.addChildElement(poolShape);
 
-            // Avança para próxima pool (abaixo)
             currentY += poolHeight + poolSpacing;
         }
 
-        // 5️⃣ Criar SequenceFlow edges
         for (ConnectionBPMNEntity connection : connections) {
             if (connection.getType() == ConnectionType.MESSAGE) continue;
 
@@ -216,7 +206,6 @@ public class BPMNModelerImpl implements BPMNModeler {
             plane.addChildElement(edge);
         }
 
-        // 6️⃣ Criar MessageFlow edges (entre pools)
         for (ConnectionBPMNEntity connection : connections) {
             if (connection.getType() != ConnectionType.MESSAGE) continue;
 

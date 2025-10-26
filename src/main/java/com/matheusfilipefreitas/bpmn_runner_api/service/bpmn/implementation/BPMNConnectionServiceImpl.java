@@ -84,8 +84,8 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             ElementInfo current = elements.get(i);
             ElementInfo next = elements.get(i + 1);
 
-            List<ConnectionBPMNEntity> duplicatedConnection = connections.stream().filter(c -> c.getSourceId() == current.getId()).toList();
-            if (duplicatedConnection.size() > 0) {
+            List<ConnectionBPMNEntity> duplicatedConnection = connections.stream().filter(c -> c.getSourceId().equals(current.getId()) && c.getTargetId().equals(next.getId())).toList();
+            if (!duplicatedConnection.isEmpty()) {
                 int nextIndex = connections.size() + 2;
                 if (nextIndex + 1 >= elements.size()) {
                     return connections;
