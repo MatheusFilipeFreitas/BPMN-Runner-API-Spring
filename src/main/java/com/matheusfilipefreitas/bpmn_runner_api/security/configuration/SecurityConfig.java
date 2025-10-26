@@ -16,12 +16,12 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, FirebaseCorsFilter firebaseCorsFilter) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
-                .addFilterBefore((Filter) firebaseCorsFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/health").permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
 
                     .anyRequest().permitAll()
-            )
+                )
+                .addFilterAfter((Filter) firebaseCorsFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 }
