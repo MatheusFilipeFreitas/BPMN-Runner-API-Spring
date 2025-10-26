@@ -19,7 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class FirebaseCorsFilterImpl implements FirebaseCorsFilter, Filter {
     private static final List<String> TRUSTED_CLIENT_ORIGINS = List.of(
-        "https://ambitious-island-060dfc40f.1.azurestaticapps.net/"
+        "https://ambitious-island-060dfc40f.1.azurestaticapps.net/",
+        "http://localhost:4200"
     );
     private final FirebaseCorsService firebaseCorsService;
 
@@ -30,9 +31,15 @@ public class FirebaseCorsFilterImpl implements FirebaseCorsFilter, Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
+
+        String path = request.getRequestURI();
+
+        if (path.equals("/api/actuator/health")) {
+            chain.doFilter(req, res);
+            return;
+        }
 
         String origin = request.getHeader("Origin");
         String apiKey = request.getHeader("X-Api-Key");
@@ -44,7 +51,7 @@ public class FirebaseCorsFilterImpl implements FirebaseCorsFilter, Filter {
             if (isTrustedClient(origin)) {
                 applyCorsHeaders(response, origin);
             }
-            else if (apiKey != null && firebaseCorsService.isOriginAllowed(origin, apiKey)) {
+            else if (apiKey != null && apiKey.length() > 0 && firebaseCorsService.isOriginAllowed(origin, apiKey)) {
                 applyCorsHeaders(response, origin);
             }
         }
@@ -56,7 +63,7 @@ public class FirebaseCorsFilterImpl implements FirebaseCorsFilter, Filter {
         }
 
         if (origin == null) {
-            if (apiKey != null) {
+            if (apiKey != null && apiKey.length() > 0) {
                 if (!firebaseCorsService.isApiKeyAllowed(apiKey)) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.getWriter().write("Invalid or expired API key, go to website and renew it");
