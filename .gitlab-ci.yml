@@ -34,7 +34,7 @@ deploy-job:
     - ARTIFACT=$(ls target/*.jar | head -n 1)
     - az login --service-principal --username $AZURE_CLIENT_ID --password "$AZURE_FULL_SECRET" --tenant $AZURE_TENANT_ID
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-    - az webapp deploy --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_WEB_APP_NAME --src-path "$ARTIFACT" --type jar  
-    - echo "Application deployed succefully!"
+    - az webapp deploy --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_WEB_APP_NAME --src-path "$ARTIFACT" --type jar --timeout 900
+    - echo "Deployment successfully completed"
   environment:
     name: production
