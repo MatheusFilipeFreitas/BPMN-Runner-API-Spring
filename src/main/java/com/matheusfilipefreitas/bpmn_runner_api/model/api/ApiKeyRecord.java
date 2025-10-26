@@ -22,5 +22,4 @@ public class ApiKeyRecord {
     private Timestamp expiresAt;
     private long requestCount;
     private List<String> allowedOrigins;
-
 }

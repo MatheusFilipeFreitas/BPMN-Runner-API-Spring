@@ -1,17 +1,12 @@
 package com.matheusfilipefreitas.bpmn_runner_api.controller.api;
 
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,7 +26,6 @@ import com.matheusfilipefreitas.bpmn_runner_api.service.api.ApiKeyService;
 
 @RestController
 @RequestMapping("/keys")
-@CrossOrigin(origins = "*")
 public class ApiKeyController {
     private final Firestore firestore;
     private final ApiKeyService apiKeyService;
@@ -43,12 +37,18 @@ public class ApiKeyController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createKey(@AuthenticationPrincipal String uid, @RequestBody CreateKeyRequest req) throws Exception {
+        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
+        }
         ApiKeyRecord rec = apiKeyService.createApiKey(uid, req.allowedOrigins(), req.daysValid());
         return ResponseEntity.ok(rec);
     }
 
     @PostMapping("/renew/{keyId}")
     public ResponseEntity<?> renewKey(@AuthenticationPrincipal String uid, @PathVariable String keyId, @RequestParam long days) throws Exception {
+        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
+        }
         ApiKeyRecord rec = apiKeyService.renewKey(uid, keyId, days);
         return ResponseEntity.ok(rec);
     }

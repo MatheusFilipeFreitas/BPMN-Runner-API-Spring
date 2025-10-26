@@ -1,0 +1,40 @@
+meta {
+  name: Script Execution
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{url}}/api/script/execute
+  body: text
+  auth: inherit
+}
+
+headers {
+  Origin: http://localhost:4200
+  X-Api-Key: 
+}
+
+body:text {
+  // Simple sample:
+  pool(p1, "Pool test") {
+      process(pc1, "Process test") {
+          start(s1);
+          task(t1, "Manual test", MANUAL);
+          gateway(g1, "label", EXCLUSIVE) {
+            yes -> {
+              task(t2, "Alguma coisa", MANUAL);
+            }
+            no -> {
+              task(t3, "Nao", MANUAL);
+              task(t4, "nada haver", MANUAL);
+            }
+          };
+      }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -33,4 +33,4 @@ build/
 .vscode/
 
 ## Firebase file
-src/main/resources/firebase-account.json
+src/main/resources/bpmn-runner-account.json

@@ -1,6 +1,5 @@
 package com.matheusfilipefreitas.bpmn_runner_api.model.script.element;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,7 +77,10 @@ public class ElementExclusiveBranch extends ElementBranch {
             .map(Map.Entry::getKey)
             .toList();
 
-        index = keys.size() - 1;
+        if (index != 0)
+        {
+            index = keys.size() - 1;
+        }
 
         if (index < 0 || index >= keys.size()) return null;
         return keys.get(index);
