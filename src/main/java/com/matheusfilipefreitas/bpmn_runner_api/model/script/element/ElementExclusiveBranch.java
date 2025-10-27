@@ -65,6 +65,14 @@ public class ElementExclusiveBranch extends ElementBranch {
         return hasMessageElementInBranch(yesChildrenIdsMap);
     }
 
+    public boolean hasYesBranchEndElements() {
+        return hasEndElementInBranch(yesChildrenIdsMap);
+    }
+
+    public boolean hasNoBranchEndElements() {
+        return hasEndElementInBranch(noChildrenIdsMap);
+    }
+
     public boolean hasNoBranchMessageElements() {
         return hasMessageElementInBranch(noChildrenIdsMap);
     }
@@ -90,6 +98,13 @@ public class ElementExclusiveBranch extends ElementBranch {
         if (branchs.isEmpty()) return false;
         Collection<ElementType> types = branchs.values();
         List<ElementType> messageElements = types.stream().filter(e -> e == ElementType.MESSAGE).toList();
+        return messageElements.size() > 0;
+    }
+
+    private boolean hasEndElementInBranch(LinkedHashMap<String, ElementType> branchs) {
+        if (branchs.isEmpty()) return false;
+        Collection<ElementType> types = branchs.values();
+        List<ElementType> messageElements = types.stream().filter(e -> e == ElementType.END_EVENT).toList();
         return messageElements.size() > 0;
     }
 }

@@ -241,7 +241,6 @@ public class BPMNModelerImpl implements BPMNModeler {
         model.getDefinitions().addChildElement(diagram);
     }
 
-
     private void handleParallel(ConnectionBPMNEntity connection, BpmnModelInstance model) {
         FlowNode sourceNode = model.getModelElementById(connection.getSourceId());
         String gatewayId = sourceNode.getId();

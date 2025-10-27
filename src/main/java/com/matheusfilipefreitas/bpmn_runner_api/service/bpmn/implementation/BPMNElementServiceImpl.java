@@ -1,5 +1,6 @@
 package com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.implementation;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,8 +47,8 @@ public class BPMNElementServiceImpl implements BPMNElementService {
 
     @Override
     public void saveEntitiesFromElementInfoList(List<ElementInfo> elementsInfo) {
-        for (ElementInfo elementInfo : elementsInfo) {
-            Optional<CommonBPMNIdEntity> entity = this.getEntityFromElementInfo(elementInfo);
+        for (int i = 0; i < elementsInfo.size(); i++) {
+            Optional<CommonBPMNIdEntity> entity = this.getEntityFromElementInfo(elementsInfo.get(i), i + 1);
             if (!entity.isEmpty()) {
                 this.save(entity.get());
             }
@@ -59,36 +60,36 @@ public class BPMNElementServiceImpl implements BPMNElementService {
         repository.resetEntities();
     }
 
-    private Optional<CommonBPMNIdEntity> getEntityFromElementInfo(ElementInfo elementInfo) {
+    private Optional<CommonBPMNIdEntity> getEntityFromElementInfo(ElementInfo elementInfo, int index) {
         switch(elementInfo.getElementType()) {
             case END_EVENT -> {
                 return Optional.ofNullable(
-                    new EndEvent(elementInfo.getId(), elementInfo.getProcessId(), elementInfo.getIndex())
+                    new EndEvent(elementInfo.getId(), elementInfo.getProcessId(), index)
                 );
             }
             case GATEWAY -> {
                 return Optional.ofNullable(
-                    new Gateway(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), elementInfo.getIndex())
+                    new Gateway(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), index)
                 );
             }
             case POOL -> {
                 return Optional.ofNullable(
-                     new Pool(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getProcessId(), elementInfo.getIndex())
+                     new Pool(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getProcessId(), index)
                 );
             }
             case PROCESS -> {
                 return Optional.ofNullable(
-                    new Process(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getIndex())
+                    new Process(elementInfo.getId(), elementInfo.getLabel(), index)
                 );
             }
             case START_EVENT -> {
                 return Optional.ofNullable(
-                    new StartEvent(elementInfo.getId(), elementInfo.getProcessId(), elementInfo.getIndex())
+                    new StartEvent(elementInfo.getId(), elementInfo.getProcessId(), index)
                 );
             }
             case TASK -> {
                 return Optional.ofNullable(
-                    new Task(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), elementInfo.getIndex())
+                    new Task(elementInfo.getId(), elementInfo.getLabel(), elementInfo.getType(), elementInfo.getProcessId(), index)
                 );
             }
             default -> {

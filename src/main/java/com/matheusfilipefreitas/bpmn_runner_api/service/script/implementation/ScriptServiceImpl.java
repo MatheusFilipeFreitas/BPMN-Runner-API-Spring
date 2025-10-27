@@ -1,8 +1,10 @@
 package com.matheusfilipefreitas.bpmn_runner_api.service.script.implementation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStreams;
@@ -18,12 +20,17 @@ import com.matheusfilipefreitas.bpmn_runner_api.common.listener.SyntaxErrorListe
 import com.matheusfilipefreitas.bpmn_runner_api.helper.builder.BPMNBuilder;
 import com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.BPMNModeler;
 import com.matheusfilipefreitas.bpmn_runner_api.helper.validators.ElementIdsValidator;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Gateway;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Pool;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Process;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.GatewayType;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementExclusiveBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementInfo;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementParallelBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.ElementType;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.grammar.ProcessLexer;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.grammar.ProcessParser;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.listener.IdCollectorListener;
@@ -65,6 +72,11 @@ public class ScriptServiceImpl implements ScriptService {
             
             if (elementsInfo.isEmpty()) {
                 throw new InterpreterException("No entities found");
+            }
+
+            Collections.sort(elementsInfo, (e1, e2) -> Integer.compare(e1.getIndex(), e2.getIndex()));
+            for (int i = 0; i < elementsInfo.size() - 1; i++) {
+                elementsInfo.get(i).setIndex(i);
             }
 
             createEntitiesFromElementsInfo(elementsInfo);

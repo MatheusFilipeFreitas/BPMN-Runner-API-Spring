@@ -13,7 +13,7 @@ public class ElementInfo {
     private final String label;
     private final String type;
     private final String processId;
-    private final Integer index;
+    private Integer index;
 
     public ElementInfo(String id, ElementType elementType, String label, String type, String processId, Integer index) {
         this.id = id;

@@ -6,6 +6,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.matheusfilipefreitas.bpmn_runner_api.security.filter.FirebaseCorsFilter;
+import com.matheusfilipefreitas.bpmn_runner_api.security.rate.RateLimitFilter;
 
 import jakarta.servlet.Filter;
 
@@ -16,12 +17,12 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, FirebaseCorsFilter firebaseCorsFilter) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/actuator/health").permitAll()
-
-                    .anyRequest().permitAll()
-                )
-                .addFilterAfter((Filter) firebaseCorsFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
-            .build();
+            .addFilterBefore(new RateLimitFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
+                .anyRequest().permitAll()
+            )
+            .addFilterAfter((Filter) firebaseCorsFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+        .build();
     }
 }
