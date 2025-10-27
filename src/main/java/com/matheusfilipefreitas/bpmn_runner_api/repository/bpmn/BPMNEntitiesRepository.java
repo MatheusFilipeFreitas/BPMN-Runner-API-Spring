@@ -3,6 +3,7 @@ package com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn;
 import java.util.List;
 import java.util.Optional;
 
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Gateway;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 
@@ -16,4 +17,5 @@ public interface BPMNEntitiesRepository {
     Optional<ConnectionBPMNEntity> getConnectionByEntityId(String id);
     void resetConnections();
     void resetEntities();
+    void addGatewayClosingEntity(Gateway closingGateway, String lastBranchElementId);
 }

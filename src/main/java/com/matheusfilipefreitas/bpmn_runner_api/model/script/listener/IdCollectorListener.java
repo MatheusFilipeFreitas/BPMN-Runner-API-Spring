@@ -87,14 +87,18 @@ public class IdCollectorListener extends ProcessParserBaseListener {
         Integer line = ctx.ID().getSymbol().getLine();
         elements.add(new ElementInfo(id, ElementType.GATEWAY, label, type, currentProcessId, line));
         if (ctx.GatewayType().getText().equals("PARALLEL")) {
+            String gatewayId = ctx.ID().getText();
+            var branchElements = new ArrayList<LinkedHashMap<String, ElementType>>();
             for (var scopeCtx : ctx.parallelScope()) {
-                var branchElements = new ArrayList<LinkedHashMap<String, ElementType>>();
+                LinkedHashMap<String, ElementType> flowElements = new LinkedHashMap<>();
                 for (var flow : scopeCtx.flowElement()) {
-                    branchElements.add(extractIdsFromFlowElement(flow));
+                    flowElements.putAll(extractIdsFromFlowElement(flow));
                 }
-                String gatewayId = ctx.ID().getText();
-                branches.add(new ElementParallelBranch(gatewayId, branchElements));
+                branchElements.add(flowElements);
             }
+            ElementParallelBranch parallelBranch = new ElementParallelBranch(gatewayId, branchElements);
+            parallelBranch.throwIfBranchHasEndElement();
+            branches.add(parallelBranch);
         }
     }
 
@@ -152,6 +156,67 @@ public class IdCollectorListener extends ProcessParserBaseListener {
     }
 
     private LinkedHashMap<String, ElementType> extractIdsFromFlowElement(ProcessParser.FlowElementContext ctx) {
+        if (ctx == null) return new LinkedHashMap<>();
+
+        LinkedHashMap<String, ElementType> ids = new LinkedHashMap<>();
+        var taskRef = ctx.taskRef();
+
+        if (taskRef == null) {
+            if(!ctx.children.isEmpty()) {
+                    if (ctx.children.get(0) instanceof ProcessParser.EndRuleContext endRule) {
+                    String id = endRule.ID().getText();
+                    ids.put(id, ElementType.END_EVENT);
+                }
+            }else{
+                return new LinkedHashMap<>();
+            }
+        }
+
+        if (taskRef != null && taskRef.taskRule() != null) {
+            ids.put(taskRef.taskRule().ID().getText(), ElementType.TASK);
+        }
+
+        if (taskRef != null && taskRef.messageRef() != null) {
+            ids.put(taskRef.messageRef().ID().getText(), ElementType.MESSAGE);
+        }
+
+        else if (taskRef != null && taskRef.gatewayRule() != null) {
+            var gwCtx = taskRef.gatewayRule();
+            ids.put(gwCtx.ID().getText(), ElementType.GATEWAY);
+
+            if (gwCtx.exclusiveScope() != null) {
+                var exScope = gwCtx.exclusiveScope();
+                var yes = exScope.yesBranch();
+                if (yes != null) {
+                    for (var flow : yes.flowElement()) {
+                        ids.putAll(extractIdsFromFlowElement(flow));
+                    }
+                }
+                var no = exScope.noBranch();
+                if (no != null) {
+                    for (var flow : no.flowElement()) {
+                        ids.putAll(extractIdsFromFlowElement(flow));
+                    }
+                }
+            } else {
+                for (var ps : gwCtx.parallelScope()) {
+                    for (var flow : ps.flowElement()) {
+                        ids.putAll(extractIdsFromFlowElement(flow));
+                    }
+                }
+            }
+        } else if (taskRef != null && taskRef.ID() != null) {
+            ids.put(taskRef.ID().getText(), ElementType.TASK);
+
+            if (taskRef.messageRef() != null) {
+                ids.put(taskRef.messageRef().ID().getText(), ElementType.MESSAGE);
+            }
+        }
+
+        return ids;
+    }
+
+    private LinkedHashMap<String, ElementType> extractIdsFromParallelFlowElement(ProcessParser.FlowElementContext ctx) {
         if (ctx == null) return new LinkedHashMap<>();
 
         LinkedHashMap<String, ElementType> ids = new LinkedHashMap<>();

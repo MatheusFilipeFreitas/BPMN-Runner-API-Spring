@@ -2,6 +2,7 @@ package com.matheusfilipefreitas.bpmn_runner_api.service.bpmn.implementation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -9,9 +10,11 @@ import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 
 import com.matheusfilipefreitas.bpmn_runner_api.common.exception.notfound.NotFoundException;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Gateway;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.ConnectionType;
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.GatewayType;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementExclusiveBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementInfo;
@@ -73,9 +76,8 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
     }
 
     private List<ConnectionBPMNEntity> buildConnectionsFromFlow(
-            List<ElementInfo> elements,
-            List<ElementBranch> branches) {
-
+                                        List<ElementInfo> elements,
+                                        List<ElementBranch> branches) {
         List<ConnectionBPMNEntity> connections = new ArrayList<>();
         int indexDefinition = 0;
         ElementBranch currentBranch = null;
@@ -86,10 +88,6 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
 
             List<ConnectionBPMNEntity> duplicatedConnection = connections.stream().filter(c -> c.getSourceId().equals(current.getId()) && c.getTargetId().equals(next.getId())).toList();
             if (!duplicatedConnection.isEmpty()) {
-                int nextIndex = connections.size() + 2;
-                if (nextIndex + 1 >= elements.size()) {
-                    return connections;
-                }
                 continue;
             }
 
@@ -99,7 +97,7 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
                 if (branchOpt.isPresent()) {
                     currentBranch = branchOpt.get();
                     handleConnectionsByBranchType(connections, branchOpt.get(), indexDefinition, current);
-                    connectBranchsToNextElement(branchOpt.get(), elements, connections, indexDefinition);
+                    connectBranchsToNextElement(branchOpt.get(), elements, connections, indexDefinition, current.getProcessId());
                     continue;
                 }
             }
@@ -126,12 +124,12 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
                 continue;
             }
 
-            if (currentBranch != null && areIdsFromDifferentBranches(current.getId(), next.getId(), currentBranch)) {
-                continue;
-            }
-
             if (currentBranch != null && !isElementInsideABranch(current.getId(), currentBranch)) {
                 currentBranch = null;
+            }
+
+            if (currentBranch != null && areIdsFromDifferentBranches(current.getId(), next.getId(), currentBranch)) {
+                continue;
             }
 
             if (current.getIndex() > next.getIndex() || current.getId().equals(next.getId())) {
@@ -154,15 +152,18 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
         }
         if (branch.getType() == BranchType.PARALLEL) {
             ElementParallelBranch parallelBranch = (ElementParallelBranch) branch;
+            LinkedHashMap<String, ElementType> currentScope = parallelBranch.getScopeFromElementId(currentId);
+            return currentScope != null;
         }
         return false;
     }
 
-    private void connectBranchsToNextElement(ElementBranch branch, List<ElementInfo> elements, List<ConnectionBPMNEntity> connections, int indexDefinition) {
+    private void connectBranchsToNextElement(ElementBranch branch, List<ElementInfo> elements, List<ConnectionBPMNEntity> connections, int indexDefinition, String processId) {
+        List<ElementInfo> filteredElements = elements.stream().filter(e -> e.getElementType() != ElementType.MESSAGE && e.getElementType() != ElementType.POOL && e.getElementType() != ElementType.PROCESS).toList();
         if (branch.getType() == BranchType.EXCLUSIVE) {
-            List<ElementInfo> filteredElements = elements.stream().filter(e -> e.getElementType() != ElementType.MESSAGE && e.getElementType() != ElementType.POOL && e.getElementType() != ElementType.PROCESS).toList();
             ElementExclusiveBranch exclusiveBranch = (ElementExclusiveBranch) branch;
             String lastGatewayElementId = exclusiveBranch.getLastElementFromBranchs();
+
             int index = IntStream.range(0, filteredElements.size())
                 .filter(i -> filteredElements.get(i).getId().equals(lastGatewayElementId))
                 .findFirst()
@@ -177,19 +178,63 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             }
 
             ElementInfo nextLastElement = filteredElements.get(index + 1);
+            repository.addGatewayClosingEntity(new Gateway(exclusiveBranch.getGatewayId() + "_end", null, branch.getType().toString(), processId, index + 1), nextLastElement.getId());
 
-            if (!exclusiveBranch.hasYesBranchMessageElements()) {
+            if (!exclusiveBranch.hasYesBranchMessageElements() && !exclusiveBranch.hasNoBranchMessageElements() && !exclusiveBranch.hasYesBranchEndElements() && !exclusiveBranch.hasNoBranchEndElements()) {
                 connections.add(
-                    new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                    new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), exclusiveBranch.getGatewayId() + "_end", ConnectionType.SEQUENCE, null, indexDefinition++)
                 );
+                connections.add(
+                    new ConnectionBPMNEntity(exclusiveBranch.getLastNoElement(), exclusiveBranch.getGatewayId() + "_end", ConnectionType.SEQUENCE, null, indexDefinition++)
+                );
+                connections.add(
+                    new ConnectionBPMNEntity(exclusiveBranch.getGatewayId() + "_end", nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                );
+            } else {
+                if (!exclusiveBranch.hasYesBranchMessageElements() && !exclusiveBranch.hasYesBranchEndElements()) {
+                    connections.add(
+                        new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                    );
+                }
+
+                if (!exclusiveBranch.hasNoBranchMessageElements() && !exclusiveBranch.hasNoBranchEndElements()) {
+                    connections.add(
+                        new ConnectionBPMNEntity(exclusiveBranch.getLastNoElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+                    );
+                }
+            }
+        }
+
+        if (branch.getType() == BranchType.PARALLEL) {
+            ElementParallelBranch parallelBranch = (ElementParallelBranch) branch;
+            String lastGatewayElementId = parallelBranch.findLastElementInBranch();
+
+            int index = IntStream.range(0, filteredElements.size())
+                .filter(i -> filteredElements.get(i).getId().equals(lastGatewayElementId))
+                .findFirst()
+                .orElse(-1);
+
+            if (index == -1) {
+                throw new RuntimeException("Could not find any element to create last elements connection");
             }
 
-            if (!exclusiveBranch.hasNoBranchMessageElements()) {
-                connections.add(
-                    new ConnectionBPMNEntity(exclusiveBranch.getLastNoElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
-                );
+            if (index == filteredElements.size() - 1) {
+                return;
             }
 
+            ElementInfo nextLastElement = filteredElements.get(index + 1);
+            repository.addGatewayClosingEntity(new Gateway(parallelBranch.getGatewayId() + "_end", null, branch.getType().toString(), processId, index + 1), nextLastElement.getId());
+            for (var scope : parallelBranch.getChildrenIdsMap()) {
+                if (!parallelBranch.hasScopeMessageElements(scope)) {
+                    String lastScopeElementId = parallelBranch.findLastElementinScope(scope);
+                    connections.add(
+                        new ConnectionBPMNEntity(lastScopeElementId, parallelBranch.getGatewayId() + "_end", ConnectionType.SEQUENCE, null, indexDefinition++)
+                    );
+                }
+            }
+            connections.add(
+                new ConnectionBPMNEntity(parallelBranch.getGatewayId() + "_end", nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
+            );
         }
     }
 
@@ -202,6 +247,7 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
         }
         if (branch.getType() == BranchType.PARALLEL) {
             ElementParallelBranch parallelBranch = (ElementParallelBranch) branch;
+            return parallelBranch.areIdsFromDifferentBranches(currentId, nextId);
         }
         return false;
     }
@@ -211,7 +257,7 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             handleExclusiveBranchCreation(connections, (ElementExclusiveBranch) branch, indexDefinition, current);
         }
         if (branch.getType() == BranchType.PARALLEL) {
-            // handleParallelBranchCreation(connections, (ElementParallelBranch) branch, indexDefinition, current);
+            handleParallelBranchCreation(connections, (ElementParallelBranch) branch, indexDefinition, current);
         }
     }
 
@@ -228,6 +274,18 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             connections.add(new ConnectionBPMNEntity(
                 current.getId(), firstNo, ConnectionType.EXCLUSIVE, "false", indexDefinition++
             ));
+        }
+    }
+
+    private void handleParallelBranchCreation(List<ConnectionBPMNEntity> connections, ElementParallelBranch branch, int indexDefinition, ElementInfo current) {
+        branch.throwIfHasEndEvent();
+        if (!branch.getChildrenIdsMap().isEmpty()) {
+            for (int i = 0; i < branch.getChildrenIdsMap().size(); i++) {
+                String firstScopeElementId = branch.findFirstElementInScope(branch.getChildrenIdsMap().get(i));
+                connections.add(new ConnectionBPMNEntity(
+                    current.getId(), firstScopeElementId, ConnectionType.PARALLEL, null, indexDefinition++
+                ));
+            }
         }
     }
 

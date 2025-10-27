@@ -24,7 +24,7 @@ public class RateLimitFilter implements Filter {
     private final ConcurrentHashMap<String, Bucket> cache = new ConcurrentHashMap<>();
 
     private Bucket createBucket() {
-        Bandwidth limit = Bandwidth.classic(100, Refill.intervally(100, Duration.ofMinutes(1)));
+        Bandwidth limit = Bandwidth.classic(30, Refill.intervally(30, Duration.ofMinutes(1)));
         return Bucket4j.builder().addLimit(limit).build();
     }
 
@@ -33,7 +33,7 @@ public class RateLimitFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
 
-        String apiKey = request.getHeader("bpmn-runner-api-key");
+        String apiKey = request.getHeader("X-Api-Key");
         String identity = apiKey != null ? apiKey : (SecurityContextHolder.getContext().getAuthentication() != null
                 ? SecurityContextHolder.getContext().getAuthentication().getName() : request.getRemoteAddr());
 

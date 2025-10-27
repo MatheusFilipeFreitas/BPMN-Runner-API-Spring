@@ -1,6 +1,7 @@
 package com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn.implementation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
 
+import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Gateway;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.repository.bpmn.BPMNEntitiesRepository;
@@ -23,11 +25,22 @@ import lombok.NoArgsConstructor;
 public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
     private ConcurrentHashMap<String, CommonBPMNIdEntity> entities = new ConcurrentHashMap<>();
     private List<ConnectionBPMNEntity> connectionsBetweenEntities = new ArrayList<>();
-    // TODO: Create branches entities
 
     @Override
     public void addEntity(CommonBPMNIdEntity entity) {
         this.entities.put(entity.getId(), entity);
+    }
+
+    @Override
+    public void addGatewayClosingEntity(Gateway closingGateway, String lastBranchElementId) {
+        List<CommonBPMNIdEntity> entitiesList = new ArrayList<>(this.entities.values());
+        Collections.sort(entitiesList, (e1, e2) -> Integer.compare(e1.getIndex(), e2.getIndex()));
+        int index = entitiesList.stream().map(e -> e.getId()).toList().indexOf(lastBranchElementId);
+        closingGateway.setIndex(index);
+        for (int i = index; i < entitiesList.size() - 1; i++) {
+            this.entities.replace(entitiesList.get(i).getId(), entitiesList.get(i));
+        }
+        this.entities.put(closingGateway.getId(), closingGateway);
     }
 
     @Override
