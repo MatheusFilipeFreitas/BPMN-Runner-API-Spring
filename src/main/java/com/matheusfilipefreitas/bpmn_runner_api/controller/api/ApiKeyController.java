@@ -7,9 +7,11 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,13 +46,21 @@ public class ApiKeyController {
         return ResponseEntity.ok(rec);
     }
 
-    @PostMapping("/renew/{keyId}")
+    @PutMapping("/renew/{keyId}")
     public ResponseEntity<?> renewKey(@AuthenticationPrincipal String uid, @PathVariable String keyId, @RequestParam long days) throws Exception {
         if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
         }
         ApiKeyRecord rec = apiKeyService.renewKey(uid, keyId, days);
         return ResponseEntity.ok(rec);
+    }
+
+    @DeleteMapping("/delete/{keyId}")
+    public ResponseEntity<?> deleteKeyRegister(@AuthenticationPrincipal String uid, @PathVariable String keyid) throws Exception {
+        if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

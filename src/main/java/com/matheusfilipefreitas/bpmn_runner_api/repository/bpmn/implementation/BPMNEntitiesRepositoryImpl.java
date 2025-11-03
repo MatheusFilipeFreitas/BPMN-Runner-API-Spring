@@ -36,9 +36,11 @@ public class BPMNEntitiesRepositoryImpl implements BPMNEntitiesRepository {
         List<CommonBPMNIdEntity> entitiesList = new ArrayList<>(this.entities.values());
         Collections.sort(entitiesList, (e1, e2) -> Integer.compare(e1.getIndex(), e2.getIndex()));
         int index = entitiesList.stream().map(e -> e.getId()).toList().indexOf(lastBranchElementId);
-        closingGateway.setIndex(index);
-        for (int i = index; i < entitiesList.size() - 1; i++) {
-            this.entities.replace(entitiesList.get(i).getId(), entitiesList.get(i));
+        closingGateway.setIndex(index + 1);
+        for (int i = index; i <= entitiesList.size() - 1; i++) {
+            CommonBPMNIdEntity entity = entitiesList.get(i);
+            entity.setIndex(i + 2);
+            this.entities.replace(entitiesList.get(i).getId(), entity);
         }
         this.entities.put(closingGateway.getId(), closingGateway);
     }

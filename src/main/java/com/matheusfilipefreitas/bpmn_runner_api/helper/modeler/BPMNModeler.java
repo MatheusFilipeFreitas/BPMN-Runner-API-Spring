@@ -6,9 +6,10 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
 
 public interface BPMNModeler {
     void modelEntitiesIntoModel(BpmnModelInstance model, List<CommonBPMNIdEntity> entities);
     void modelConnectionsIntoModel(BpmnModelInstance model, List<ConnectionBPMNEntity> connections);
-    void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections);
+    void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections, List<ElementBranch> branches);
 }

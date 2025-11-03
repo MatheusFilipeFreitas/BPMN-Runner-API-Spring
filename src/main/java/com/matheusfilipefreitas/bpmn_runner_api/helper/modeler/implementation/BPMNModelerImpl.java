@@ -3,6 +3,7 @@ package com.matheusfilipefreitas.bpmn_runner_api.helper.modeler.implementation;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,6 +13,7 @@ import org.apache.logging.log4j.util.TriConsumer;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.Collaboration;
 import org.camunda.bpm.model.bpmn.instance.ConditionExpression;
+import org.camunda.bpm.model.bpmn.instance.Event;
 import org.camunda.bpm.model.bpmn.instance.FlowNode;
 import org.camunda.bpm.model.bpmn.instance.InteractionNode;
 import org.camunda.bpm.model.bpmn.instance.MessageFlow;
@@ -36,6 +38,11 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Task;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.ConnectionType;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementExclusiveBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementParallelBranch;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.BranchOrder;
+import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.types.ElementType;
 
 
 @Component
@@ -87,7 +94,7 @@ public class BPMNModelerImpl implements BPMNModeler {
     }
 
     @Override
-    public void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections) {
+    public void createDiagramElements(BpmnModelInstance model, List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections, List<ElementBranch> branchs) {
         Collaboration collaboration = model.getModelElementsByType(Collaboration.class)
             .stream().findFirst().orElse(null);
 
@@ -111,8 +118,7 @@ public class BPMNModelerImpl implements BPMNModeler {
             .collect(Collectors.groupingBy(CommonBPMNIdEntity::getProcessId));
 
         int poolSpacing = 100;
-        int elementSpacingX = 200;
-        int elementSpacingY = 150;
+        int elementSpacingX = 100;
         int poolPadding = 50;
         double currentY = 50;
 
@@ -130,13 +136,54 @@ public class BPMNModelerImpl implements BPMNModeler {
 
             String poolId = participant != null ? participant.getId() : "pool_" + processId;
 
-            int x = 150;
+            int x = 90;
             double maxX = 0;
             double maxY = currentY;
+            int branchVerticalSpacing = 120;
+            int branchIndex = 0;
+            Map<String, Integer> branchYOffsetMap = new HashMap<>();
+
+            for (ElementBranch branch : branchs) {
+                branchYOffsetMap.put(branch.getGatewayId(), branchIndex++);
+            }
 
             for (CommonBPMNIdEntity entity : processEntities) {
                 ModelElementInstance el = model.getModelElementById(entity.getId());
                 if (!(el instanceof FlowNode node)) continue;
+
+                double width = 100;
+                double height = 80;
+                x += 60;
+
+                if (node instanceof Event) {
+                    width = 40;
+                    height = 40;
+                    x += 60;
+                } else if (node instanceof org.camunda.bpm.model.bpmn.instance.Gateway) {
+                    width = 60;
+                    height = 60;
+                    x += 60;
+                }
+
+                    double branchYOffset = 0;
+                for (ElementBranch branch : branchs) {
+                    if (branch instanceof ElementParallelBranch parallelBranch) {
+                        for (int i = 0; i < parallelBranch.getChildrenIdsMap().size(); i++) {
+                            LinkedHashMap<String, ElementType> scope = parallelBranch.getChildrenIdsMap().get(i);
+                            if (scope.containsKey(entity.getId())) {
+                                branchYOffset = i * branchVerticalSpacing;
+                                break;
+                            }
+                        }
+                    } else if (branch instanceof ElementExclusiveBranch exclusiveBranch) {
+                        BranchOrder order = exclusiveBranch.getIdInsideBranches(entity.getId());
+                        if (order == BranchOrder.NO) {
+                            branchYOffset = branchVerticalSpacing;
+                        }
+                    }
+                }
+
+                double elementCenterY = (currentY + poolPadding + branchYOffset + (80 / 2.0) - (height / 2.0)) + 20;
 
                 BpmnShape shape = model.newInstance(BpmnShape.class);
                 shape.setId("Shape_" + node.getId());
@@ -144,9 +191,9 @@ public class BPMNModelerImpl implements BPMNModeler {
 
                 Bounds bounds = model.newInstance(Bounds.class);
                 bounds.setX(x);
-                bounds.setY(currentY + poolPadding);
-                bounds.setWidth(100);
-                bounds.setHeight(80);
+                bounds.setY(elementCenterY);
+                bounds.setWidth(width);
+                bounds.setHeight(height);
 
                 shape.addChildElement(bounds);
                 plane.addChildElement(shape);
