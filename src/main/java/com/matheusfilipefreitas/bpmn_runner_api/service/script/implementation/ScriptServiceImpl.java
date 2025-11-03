@@ -210,8 +210,7 @@ public class ScriptServiceImpl implements ScriptService {
 
     private void createGraphicElementsInModel(List<CommonBPMNIdEntity> entities, List<ConnectionBPMNEntity> connections) {
         throwIfCannotGetModeler();
-
-        modeler.createDiagramElements(model, entities, connections);
+        modeler.createDiagramElements(model, entities, connections, elementsBranchInfo);
     }
 
     private void throwIfCannotGetModeler() {

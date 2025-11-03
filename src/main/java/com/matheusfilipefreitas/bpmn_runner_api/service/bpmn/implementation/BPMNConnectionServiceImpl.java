@@ -14,7 +14,6 @@ import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.Gateway;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.common.CommonBPMNIdEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.connection.ConnectionBPMNEntity;
 import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.ConnectionType;
-import com.matheusfilipefreitas.bpmn_runner_api.model.bpmn.types.GatewayType;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementExclusiveBranch;
 import com.matheusfilipefreitas.bpmn_runner_api.model.script.element.ElementInfo;
@@ -178,9 +177,8 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
             }
 
             ElementInfo nextLastElement = filteredElements.get(index + 1);
-            repository.addGatewayClosingEntity(new Gateway(exclusiveBranch.getGatewayId() + "_end", null, branch.getType().toString(), processId, index + 1), nextLastElement.getId());
-
             if (!exclusiveBranch.hasYesBranchMessageElements() && !exclusiveBranch.hasNoBranchMessageElements() && !exclusiveBranch.hasYesBranchEndElements() && !exclusiveBranch.hasNoBranchEndElements()) {
+                repository.addGatewayClosingEntity(new Gateway(exclusiveBranch.getGatewayId() + "_end", null, branch.getType().toString(), processId, index + 1), nextLastElement.getId());
                 connections.add(
                     new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), exclusiveBranch.getGatewayId() + "_end", ConnectionType.SEQUENCE, null, indexDefinition++)
                 );
@@ -191,13 +189,13 @@ public class BPMNConnectionServiceImpl implements BPMNConnectionService {
                     new ConnectionBPMNEntity(exclusiveBranch.getGatewayId() + "_end", nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
                 );
             } else {
-                if (!exclusiveBranch.hasYesBranchMessageElements() && !exclusiveBranch.hasYesBranchEndElements()) {
+                if (!exclusiveBranch.hasYesBranchMessageElements() && !exclusiveBranch.hasYesBranchEndElements() && nextLastElement.getProcessId().equals(processId)) {
                     connections.add(
                         new ConnectionBPMNEntity(exclusiveBranch.getLastYesElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
                     );
                 }
 
-                if (!exclusiveBranch.hasNoBranchMessageElements() && !exclusiveBranch.hasNoBranchEndElements()) {
+                if (!exclusiveBranch.hasNoBranchMessageElements() && !exclusiveBranch.hasNoBranchEndElements() && nextLastElement.getProcessId().equals(processId)) {
                     connections.add(
                         new ConnectionBPMNEntity(exclusiveBranch.getLastNoElement(), nextLastElement.getId(), ConnectionType.SEQUENCE, null, indexDefinition++)
                     );

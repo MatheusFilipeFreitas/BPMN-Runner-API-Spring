@@ -25,7 +25,7 @@ public class ElementParallelBranch extends ElementBranch {
         this.childrenIdsMap.forEach(scope -> {
             var elementTypes = scope.values();
             List<ElementType> invalidTypes = elementTypes.stream().filter(t -> t.equals(ElementType.END_EVENT)).toList();
-            if (invalidTypes.size() > 0) {
+            if (!invalidTypes.isEmpty()) {
                 throw new InterpreterException("Cannot use parallel gateway with an end element inside one of the scopes in gateway: " + this.gatewayId);
             }
         });
@@ -51,7 +51,6 @@ public class ElementParallelBranch extends ElementBranch {
         return currentIndex != nextIndex;
     }
 
-
     public String findFirstElementInScope(LinkedHashMap<String, ElementType> scope) {
         return findElementInIndex(scope, 0);
     }
@@ -73,7 +72,7 @@ public class ElementParallelBranch extends ElementBranch {
     public void throwIfBranchHasEndElement() {
         for (var scope : this.childrenIdsMap) {
             List<ElementType> types = scope.values().stream().filter(e -> e.equals(ElementType.END_EVENT)).toList();
-            if (types.size() > 0) {
+            if (!types.isEmpty()) {
                 throw new InterpreterException("Invalid end element inside parallel gateway with id: " + this.gatewayId);
             }
         }
@@ -81,7 +80,7 @@ public class ElementParallelBranch extends ElementBranch {
 
     public boolean hasScopeMessageElements(LinkedHashMap<String, ElementType> scope) {
         List<ElementType> types = scope.values().stream().filter(t -> t.equals(ElementType.MESSAGE)).toList();
-        return types != null && types.size() > 0;
+        return types != null && !types.isEmpty();
     }
 
     public String findLastElementInBranch() {

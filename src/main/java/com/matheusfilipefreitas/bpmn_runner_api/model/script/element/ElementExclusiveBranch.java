@@ -29,10 +29,18 @@ public class ElementExclusiveBranch extends ElementBranch {
     public BranchOrder getIdInsideBranches(String id) {
         ElementType yesElement = yesChildrenIdsMap.getOrDefault(id, null);
         ElementType noElement = noChildrenIdsMap.getOrDefault(id, null);
-        if (yesElement != null)
+        if (yesElement != null) {
+            if (yesElement == ElementType.MESSAGE) {
+                return null;
+            }
             return BranchOrder.YES;
-        if (noElement != null)
+        }
+        if (noElement != null) {
+            if (noElement == ElementType.MESSAGE) {
+                return null;
+            }
             return BranchOrder.NO;
+        }
         return null;
     }
 
