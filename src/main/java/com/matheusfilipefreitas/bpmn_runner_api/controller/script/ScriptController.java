@@ -19,7 +19,10 @@ import lombok.AllArgsConstructor;
 public class ScriptController {
     private final ScriptService service; 
 
-    @PostMapping(value = "/execute", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_XML_VALUE)
+    @PostMapping(
+        value = "/execute", 
+        consumes = MediaType.TEXT_PLAIN_VALUE,
+        produces = { MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE })
     public ResponseEntity<String> executeScript(@AuthenticationPrincipal String uid, @RequestBody String code) {
         String result = service.processScript(code);
         return ResponseEntity.ok(result);

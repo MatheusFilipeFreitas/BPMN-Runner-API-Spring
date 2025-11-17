@@ -12,4 +12,5 @@ public interface ApiKeyService {
     Optional<ApiKeyWithOwner> findByKey(String key);
     void incrementRequestCount(DocumentReference docRef);
     ApiKeyRecord renewKey(String uid, String keyId, long additionalDays);
+    void deleteKey(String uid, String keyId);
 }

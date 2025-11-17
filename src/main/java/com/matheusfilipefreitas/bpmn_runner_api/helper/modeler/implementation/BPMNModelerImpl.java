@@ -165,7 +165,7 @@ public class BPMNModelerImpl implements BPMNModeler {
                     x += 60;
                 }
 
-                    double branchYOffset = 0;
+                double branchYOffset = 0;
                 for (ElementBranch branch : branchs) {
                     if (branch instanceof ElementParallelBranch parallelBranch) {
                         for (int i = 0; i < parallelBranch.getChildrenIdsMap().size(); i++) {
