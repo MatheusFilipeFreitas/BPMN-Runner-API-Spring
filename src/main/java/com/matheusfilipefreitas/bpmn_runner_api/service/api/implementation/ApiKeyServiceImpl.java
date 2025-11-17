@@ -116,8 +116,9 @@ public class ApiKeyServiceImpl implements ApiKeyService {
             DocumentSnapshot snap = ref.get().get();
             if (!snap.exists()) throw new RuntimeException("Key not found");
             ApiKeyRecord dataFromDoc = snap.toObject(ApiKeyRecord.class);
+
             Instant newExpiry = Instant.now().plusSeconds(additionalDays * 24 * 3600);
-            ref.update("expiresAt", newExpiry.toString()).get();
+            ref.update("expiresAt", Timestamp.of(Date.from(newExpiry))).get();
 
             ApiKeyRecord rec = new ApiKeyRecord(
                 dataFromDoc.getKeyId(),
@@ -131,6 +132,15 @@ public class ApiKeyServiceImpl implements ApiKeyService {
             return rec;
         } catch (Exception ex) {
             throw new RuntimeException("Could not renew user key");
+        }
+    }
+
+    public void deleteKey(String uid, String keyId) {
+        try {
+            DocumentReference ref = firestore.collection("users").document(uid).collection("apiKeys").document(keyId);
+            ref.delete();
+        } catch (Exception ex) {
+            throw new RuntimeException("Could not delete user key");
         }
     }
 }

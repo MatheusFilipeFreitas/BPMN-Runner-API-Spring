@@ -47,19 +47,20 @@ public class ApiKeyController {
     }
 
     @PutMapping("/renew/{keyId}")
-    public ResponseEntity<?> renewKey(@AuthenticationPrincipal String uid, @PathVariable String keyId, @RequestParam long days) throws Exception {
+    public ResponseEntity<?> renewKey(@AuthenticationPrincipal String uid, @PathVariable String keyId) throws Exception {
         if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
         }
-        ApiKeyRecord rec = apiKeyService.renewKey(uid, keyId, days);
+        ApiKeyRecord rec = apiKeyService.renewKey(uid, keyId, 30);
         return ResponseEntity.ok(rec);
     }
 
     @DeleteMapping("/delete/{keyId}")
-    public ResponseEntity<?> deleteKeyRegister(@AuthenticationPrincipal String uid, @PathVariable String keyid) throws Exception {
+    public ResponseEntity<?> deleteKeyRegister(@AuthenticationPrincipal String uid, @PathVariable String keyId) throws Exception {
         if (uid == null || uid.isBlank() || uid.equals("anonymousUser")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
         }
+        apiKeyService.deleteKey(uid, keyId);
         return ResponseEntity.noContent().build();
     }
 
