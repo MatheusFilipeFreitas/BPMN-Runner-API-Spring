@@ -13,7 +13,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 @Configuration
 @EnableCaching
 public class CacheConfig {
-@Bean
+
+    @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         
