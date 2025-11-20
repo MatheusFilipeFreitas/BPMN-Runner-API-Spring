@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class FirebaseCorsFilterImpl implements FirebaseCorsFilter, Filter {
     private static final List<String> TRUSTED_CLIENT_ORIGINS = List.of(
         "https://ambitious-island-060dfc40f.1.azurestaticapps.net",
-        "https://bpmn-runner.dev/"
+        "https://bpmn-runner.dev"
     );
     private final FirebaseCorsService firebaseCorsService;
 
