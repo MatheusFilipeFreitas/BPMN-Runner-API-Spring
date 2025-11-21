@@ -48,10 +48,16 @@ mvn -v
 
 ## ⚡ Instalação
 
-1. Clone o repositório:
+1. Clone o repositório (Gitlab):
 
 ```bash
 git clone https://gitlab.com/aluno-ufn/bpmn-runner-api.git
+```
+
+1. Clone o repositório (Github):
+
+```bash
+git clone https://github.com/MatheusFilipeFreitas/BPMN-Runner-API-Spring.git
 ```
 
 2. Acesse a pasta do projeto:
