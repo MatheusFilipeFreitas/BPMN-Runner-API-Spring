@@ -5,7 +5,8 @@
 
 ## 🌐 Demo
 
-Acesse a Documentação: [Doc do Projeto](https://ambitious-island-060dfc40f.1.azurestaticapps.net/)
+* Acesse a Documentação: [Doc do Projeto](https://bpmn-runner.dev/)
+* URL da API: [Api](https://api.bpmn-runner.app)
 
 ## 📖 Descrição
 
@@ -28,6 +29,7 @@ Antes de iniciar, você precisa ter instalado:
 
 * Java 17 ou superior
 * Maven ou Gradle
+* Firebase (Firestore project)
 
 Verifique a versão do Java:
 
@@ -42,6 +44,7 @@ mvn -v
 ```
 
 ---
+
 
 ## ⚡ Instalação
 
@@ -73,6 +76,45 @@ gradle build
 
 ---
 
+## Como baixar o arquivo JSON de configuração do Firebase
+1. Acesse o Firebase Console
+
+👉 https://console.firebase.google.com/
+
+Escolha o seu projeto.
+
+2. Abra “Configurações do projeto”
+
+No menu esquerdo:
+
+⚙️ Ícone de engrenagem → Configurações do projeto
+
+3. Vá até a aba “Contas de serviço”
+
+No topo, clique em:
+
+Contas de serviço
+
+4. Clique em “Gerar nova chave privada”
+
+Aparece um card com o Google Cloud Service Account.
+
+Lá tem um botão:
+
+➡️ Gerar nova chave privada
+
+O Firebase vai:
+
+gerar uma chave nova
+
+baixar um arquivo .json no seu computador
+
+renomeie o arquivo para "bpmn-runner-account.json"
+
+cole o arquivo na pasta: `bpmn-runner-api/src/main/resources/bpmn-runner-account.json`
+
+---
+
 ## 🚀 Execução
 
 Para rodar a aplicação em ambiente de desenvolvimento:
@@ -88,12 +130,6 @@ gradle bootRun
 ```
 
 A aplicação estará disponível em `http://localhost:8080`.
-
-Para gerar o build de produção:
-
-```bash
-java -jar target/nbpmn-runner-api-0.0.1-SNAPSHOT.jar
-```
 
 ---
 
@@ -116,21 +152,6 @@ bpmn-runner-api/
 ├─ pom.xml ou build.gradle
 └─ README.md
 ```
-
----
-
-## 📝 Funcionalidades
-
-* Funcionalidade 1: **\[descrição]**
-* Funcionalidade 2: **\[descrição]**
-* Funcionalidade 3: **\[descrição]**
-
----
-
-## 🔗 Referências
-
-* [Documentação Spring Boot](https://spring.io/projects/spring-boot)
-* [Java](https://www.oracle.com/java/)
 
 ---
 
